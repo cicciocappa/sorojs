@@ -1,0 +1,390 @@
+https://www.elmerproductions.com/sp/peterb/
+
+BOULDER
+{
+Animate: yes
+Impact explosive: no
+Chain explosion action: consumed
+Explosion type: n/a
+Rounded: yes
+}
+/*
+Specification
+The boulder, like the diamond, is an object which falls, rolls off some other objects, and can explode some other objects when it hits them.
+Falling
+A stationary boulder which is discovered to have space underneath it changes state into a falling boulder (with an appropriate sound played) and moves down one position.
+A falling boulder which has space underneath it continues to fall another position.
+A falling boulder discovered to not have space underneath it will have different effects depending on the object below:
+Cause explosion: if the object below is explosive (firefly, amoeba, Rockford), the boulder will cause the object below to explode
+Magic wall: see below
+Stop falling: for any other object below, an appropriate sound is played as of a boulder hitting an object. In addition, a check is made to see whether the boulder can roll (see below); if so, the boulder is moved to its new position and is still considered falling, otherwise the boulder remains in its current position but changes state into a stationary boulder.
+Falling through magic wall
+If a falling boulder hits a magic wall, then:
+A sound is played: the sound is as of a diamondhitting something. This sound is played regardless of what happens next.
+If the magic wall was Dormant (a global attribute), the magic wall is now considered to be On.
+If the magic wall is now On then
+if there is space in the position below the magic wall then the boulder morphs into a falling diamond and moves down two positions, to be below the magic wall
+otherwise the boulder simply disappears
+A stationary boulder sitting on top of a magic wall does not activate the magic wall or move in any way (not even rolling off it).
+Rolling
+Note that both stationary and falling boulders can roll.
+If a boulder is discovered to have a stationary, rounded object (stationary boulder, stationary diamond, brick wall) below it, then the boulder will attempt to roll off the object below. Note that falling boulders and diamonds can roll off things too; they don't have to come to a halt first.
+
+In order for a boulder or diamond to roll, not only must the object below be a brick wall, stationary boulder or stationary diamond, but the objects to the left and diagonally left/down (or right and diagonally right/down) must both be space. Preference is given to rolling to the left over rolling to the right. If these criteria are satisfied, the boulder or diamond is moved one space immediately to the side (not diagonally down) and is changes state to be falling (if it wasn't already).
+
+If the boulder is not able to roll, it remains where it is, and changes state into a stationary boulder (if it wasn't already).
+
+Causing explosions
+If a falling boulder hits an explosive object (firefly, butterfly, Rockford), then that object explodes, consuming the boulder in the explosion. The boulder itself does not explode.
+
+General Algorithm
+See: boulder.pas
+*/
+
+DIAMOND
+{
+Animate: yes
+Impact explosive: no
+Chain explosion action: consumed
+Explosion type: n/a
+Rounded: yes
+}
+/*
+Specification
+The diamond is almost identical to the boulder. Basically, you can take the boulder's algorithm and replace all instances of "boulder" with "diamond", and in the case of falling through the magic wall, a diamond morphs into a boulder in the same way that boulders morph into diamonds.
+Please refer to the boulder specification for full details.
+*/
+
+MAGIC_WALL
+{
+Animate: no
+Impact explosive: no
+Chain explosion action: consumed
+Explosion type: n/a
+Rounded: no
+}
+/*
+Specification
+Magic wall starts life dormant, and visually looks just like ordinary brick wall, until a boulder or diamond falls on it. Then all magic wall in the cave gets turned on for a time: it sparkles in a distinctive way, it makes a continous tinkling sound, and in this time any boulder or diamond that hits the wall gets changed into a diamond or boulder respectively, and falls through, making an appropriate diamond sound or boulder sound respectively. After a certain time has elapsed (the magic wall milling time), the magic wall expires; it goes back to looking like ordinary brick wall, no longer makes any sound, and any boulder or diamond that fall on the wall just disappear (but still make the same sound as appropriate).
+States of magic wall
+Dormant: Looks just like ordinary brick wall, until a boulder or diamond activates it.
+On: Sparkles, makes sound, and changes boulders and diamonds into diamonds and boulders, until the Magic Wall Milling Time runs out.
+Expired: Looks just like ordinary brick wall; any boulders and diamonds hitting it just disappear but still with a sound.
+Objects move two squares in one frame
+Note that when a boulder or diamond hits a magic wall (whether on or not), the object effectively moves two squares in one frame: one moment it's above the wall, the next moment it's two squares down, below the wall; it's never "inside" the wall. Note also that if there is any object underneath the wall at the point where the boulder or diamond falls through, the boulder or diamond is lost (which is sometimes a helpful way of getting rid of excess boulders).
+Stationary objects don't fall through
+Note that a stationary boulder or diamond sits on a magic wall without falling through or turning it on. Note also that magic wall isn't "rounded"; boulders and diamonds do not roll off magic wall like they do brick wall.
+*/
+
+BRICK_WALL
+{
+Animate: no
+Impact explosive: no
+Chain explosion action: consumed
+Explosion type: n/a
+Rounded: yes
+}
+
+/*
+Specification
+Basically, brick wall is just wall, with the properties that it is rounded (and thus boulders or diamonds can roll off it), and that unlike steel wall, it can be consumed in an explosion.
+Magic wall and expanding wall look the same as brick wall most of the time.
+*/
+
+STEEL_WALL
+{
+Animate: no
+Impact explosive: no
+Chain explosion action: unaffected
+Explosion type: n/a
+Rounded: no
+}
+/*
+Specification
+Basically, steel wall is just wall, with the property that it remains unaffected by explosions. It is not rounded, so boulders and diamonds sit on top without rolling off.
+*/
+
+EXPANDING_WALL
+{
+Animate: yes
+Impact explosive: no
+Chain explosion action: consumed
+Explosion type: n/a
+Rounded: no
+}
+/*
+Specification
+Expanding wall looks identical to brick wall, but is not rounded; things don't roll off it.
+Expanding wall "grows" sideways whenever possible. If ever a piece of expanding wall discovers that the position to the immediate left or right is empty space, it grows to fill that space. A piece of expanding wall can expand to fill both the left and the right spaces in one frame. However, the newly created pieces of expanding wall don't get to themselves grow until the next frame, so if you put a piece of expanding wall into a cave of space, you will see it expanding left and right at the rate of one space per frame.
+
+Each time expanding wall grows, an appropriate sound is made (failing all else, just the standard boulder crash sound, the same as is used when a boulder starts or stops falling, or is pushed).
+
+General Algorithm
+procedure ScanExpandingWall(in positionType wallPosition) 
+# Local variables
+    positionType NewPosition;
+
+# Try to grow left
+    NewPosition := GetRelativePosition(wallPosition, left1);
+    if (GetObjectAtPosition(NewPosition) == objSpace) then
+        PlaceObject(objExpandingWall, attribNone, NewPosition);
+    endif
+
+# Try to grow right
+    NewPosition := GetRelativePosition(wallPosition, right1);
+    if (GetObjectAtPosition(NewPosition) == objSpace) then
+        PlaceObject(objExpandingWall, attribNone, NewPosition);
+    endif
+endprocedure
+*/
+
+ROCKFORD
+{
+Animate: yes
+Impact explosive: yes
+Chain explosion action: consumed
+Explosion type: explodeToSpace
+Rounded: no
+}
+
+/*
+Specification
+Rockford is the player, and so Rockford's movements are controlled by the player. The basic objective being, of course, to collect enough diamonds to activate the exit, and to get out alive (without being killed by various means or running out of time).
+Rockford movement performed during scan routine
+There are three posibilities for when an implementation of BoulderDash can check the player controls (joystick) and move Rockford:
+Before the cave scan routine
+During the cave scan routine
+After the cave scan routine
+When the scan is performed can make a difference as to how the objects in the cave interact. If Rockford and another object both attempt to move into the same position, who succeeds depends on when the Rockford move routine is performed. If it is done before the cave scan, Rockford will always get priority. If it is done during the cave scan, who gets priority depends on the direction Rockford is moving in. And if the Rockford move routine is done after the cave scan routine, then the other object will get priority.
+In BoulderDash I on the C64, the Rockford move routine is done during the cave scan routine: that is, when the scan routine comes across Rockford, it then looks at the joystick and processes it appropriately. This technique has an advantage: it doesn't presume that Rockford actually exists in the cave (Rockford doesn't exist during the pre-Rockford sequence or after he dies). Doing it this way makes it easier for the cave to continue on in its normal way regardless of whether Rockford exists or not.
+
+Movement controls
+Using the joystick or other control device, the player can control Rockford's movement. Rockford can move up, down, left and right only, not diagonally. In BoulderDash I for the C64, if the player presses diagonally, Rockford moves horizontally (the horizontal component has priority over the vertical component). Although perhaps not critical, I personally am used to the player controls behaving in this fashion, and I initially found it frustrating when playing an implementation that behaved differently. Each implementation may well have its own idiosyncrasies, but if you're out to clone the C64 look & feel, then you might want to take note of the C64's particular behaviour.
+The fire button on the joystick can be used to "move without moving"; that is, everything happens as if Rockford did move in the indicated direction, but Rockford isn't actually moved. This is critical for some caves which require this technique.
+
+*/
+
+DIRT
+{
+Animate: no
+Impact explosive: no
+Chain explosion action: consumed
+Explosion type: n/a
+Rounded: no
+}
+
+/*
+Specification
+Dirt exists just to hold things up. :) Rockford can move through dirt, amoeba can grow into dirt, but boulders and diamonds sit on dirt without rolling off. Fireflies and butterflies can not move through dirt.
+*/
+
+FIREFLY
+{
+Animate: yes
+Impact explosive: yes
+Chain explosion action: consumed
+Explosion type: explodeToSpace
+Rounded: no
+}
+/*
+Specification
+Fireflies, like butterflies, are creatures which move around in a set pattern. If impacted, or on contact with amoeba or Rockford, fireflies explode into space.
+Fireflies are considered to be facing in one of four directions (up, down, left, right) although visually you can't tell which direction a firefly is currently facing by looking at it. Fireflies always like to turn to their left if possible (going round and round in circles if possible), failing that they will go forward, or finally they will turn to their right if they can't move forward.
+
+Turning corners
+Fireflies do not always turn corners instantly. Flies can turn in their "preferred direction" instantly, but otherwise take time to turn against their "preferred direction".
+In BoulderDash I (on the C64), fireflies always begin "facing left", meaning that they will make their first movement down if possible (because fireflies always try to turn left when possible). The C64 cave format allows you to specify the initial direction of each firefly individually, however all caves in the C64 BoulderDash I have their fireflies facing left to begin with. It is recommended that all fireflies begin life facing left.
+
+The way a firefly works is this:
+
+if (space to the firefly's left is empty) then
+    turn 90 degrees to firefly's left;
+    move one space in this new direction; 
+} else if (space ahead is empty) then
+    move one space forwards; 
+} else {
+    turn 90 degrees to the firefly's right;
+    _do not move_;
+}
+The key thing to note is that if a firefly is forced to turn against its "preferred direction", it does not actually move for that frame.
+The result is that when a firefly can make a left turn, it will do so "instantly", but if forced to make a right turn, it will pause for one frame before doing so. If forced to turn around (180 degrees), it will pause for two frames before going back the way it came.
+
+Checking for amoeba and Rockford
+A fly will check all four directions next to it for amoeba or Rockford before it attempts to move each frame. Should it find any amoeba or Rockford, it explodes on the spot. It is the fly that explodes, not Rockford or the amoeba.
+Because the check is made before the fly moves, you may momentarily see the fly next to an amoeba/Rockford for one frame before the explosion happens. Note that (unusually), the firefly will also explode if next to a "Rockford, scanned this frame". By "scanned this frame" I mean that Rockford has already moved once during this scan frame, and it is marked as such so that if the same Rockford is come across again in the same scan frame (because Rockford moved down or right) then the player won't have the opportinity to move Rockford again.
+
+General Algorithm
+procedure ScanFirefly(in positionType positionOfFirefly;
+                      in directionType directionOfFirefly) 
+# Local variables
+    positionType NewPosition;
+    directionType NewDirection;
+
+# First check whether the firefly will explode by being next to Rockford,
+# Rockford-scanned-this-frame or amoeba but not amoeba-scanned-this-frame.
+    if (FlyWillExplode(positionOfFirefly)) then
+        Explode(positionOfFirefly, explodeToSpace);
+    else
+
+# Failing that, attempt to move turn left and move there if possible
+        NewPosition = GetNextFlyPosition(positionOfFirefly, directionOfFirefly, turnLeft);
+        if (GetObjectAtPosition(NewPosition) == objSpace) then
+            NewDirection = GetNewDirection(directionOfFirefly, turnLeft);
+            PlaceFirefly(NewPosition, NewDirection);
+            PlaceSpace(positionOfFirefly);  # ie old position
+        else
+
+# Failing that, attempt to move straight ahead
+            NewPosition = GetNextFlyPosition(positionOfFirefly, directionOfFirefly, straightAhead);
+            if (GetObjectAtPosition(NewPosition) == objSpace) then
+                PlaceFirefly(NewPosition, directionOfFirefly); # ie keep same direction
+                PlaceSpace(positionOfFirefly);  # ie old position
+            else
+
+# Failing that, turn to the right but do not move
+                NewDirection = GetNewDirection(directionOfFirefly, turnRight);
+                PlaceFirefly(positionOfFirefly, NewDirection);  # old position, new direction
+            endif
+        endif
+    endif 
+endprocedure
+
+##
+
+function FlyWillExplode(in positionType aPosition):Boolean 
+# Check the four directions around a fly at a given position to see whether 
+# it will explode. Returns true if so, false if not.
+
+# Local variables
+    Boolean ExplodedYet; 
+
+# Check the four directions to see whether the fly will explode
+    ExplodedYet := CheckFlyExplode(GetRelativePosition(aPosition, up1));
+    if (not ExplodedYet) then
+        ExplodedYet := CheckFlyExplode(GetRelativePosition(aPosition, left1));
+    endif
+    if (not ExplodedYet) then
+        ExplodedYet := CheckFlyExplode(GetRelativePosition(aPosition, right1));
+    endif
+    if (not ExplodedYet) then
+        ExplodedYet := CheckFlyExplode(GetRelativePosition(aPosition, down1));
+    endif
+
+# Return function result
+    return ExplodedYet; 
+endfunction
+
+##
+
+function CheckFlyExplode(in positionType aPosition):Boolean 
+# Check the given position to see whether it contains an object which a 
+# fly will explode if it is in contact with (ie Rockford or Amoeba). 
+# Returns true if so, false if not.
+
+    return (GetObjectAtPosition(aPosition) in {objRockford, objRockfordScanned, objAmoeba}); 
+endfunction
+
+
+
+*/
+
+BUTTERFLY
+{
+Animate: yes
+Impact explosive: yes
+Chain explosion action: consumed
+Explosion type: explodeToDiamonds
+Rounded: no
+}
+/*
+Specification
+Butterflies are the same as fireflies except
+butterflies usually begin life facing down rather than left
+butterflies prefer to go to their right (failing that go straight, failing that turn left)
+they look different
+when they explode, they explode to diamonds rather than space
+Please refer to the firefly specification for full details.
+*/
+
+AMOEBA
+{
+Animate: yes
+Impact explosive: no
+Chain explosion action: consumed
+Explosion type: n/a
+Rounded: no
+}
+
+/*
+Specification
+Amoeba is stuff that grows randomly. If trapped such that it can't grow any more, it "suffocates" and turns into diamonds. If it grows too large, it turns into boulders. Fireflies and butterflies will explode on contact with amoeba.
+Every scan, a count is kept of how many amoeba have been found. For each amoeba found during the current scan, it does these things:
+
+If there were too many (see below) amoeba found in the scan during the last frame, the amoeba is considered to have grown too large, and so all amoeba found in this scan frame are quietly replaced with boulders.
+Failing that, if it was determined in the scan during the last frame that the amoeba was completely enclosed (could not grow), then each amoeba is quietly replaced with a diamond.
+Failing that, if there have been no amoeba found during the current scan that had the potential to grow, then a check is made to see whether this amoeba could grow. If it is possible for it to grow, then the flag is changed to indicate that there is at least one amoeba in existance that can grow during this frame.
+If the amoeba did not turn into a diamond or a boulder (in steps 1 or 2 above), it may or may not attempt to grow. A random number is generated to decide whether the amoeba will attempt grow: it has a 4/128 chance (about 3%) normally, or a 4/16 chance (25%) in some circumstances. If the decision is that the amoeba will atempt to grow, it randomly chooses one of the four directions to grow in. If that direction contains a space or dirt, the amoeba grows to fill that spot. The new amoeba just grown does not itself get the chance to grow until the next frame (ie the new amoeba is marked as "amoeba, scanned this frame").
+How many is too many?
+For the Commodore 64 implementation of Boulder Dash, "too many" amoeba (the point where they turn into boulders) is 200 or more. Since other implementations of Boulder Dash may permit cave sizes other than 40 x 22 (= 880 squares), I suggest that "too many" is defined as being 200/880 = 22.7% of the total number of squares available in the cave. In other words, once 22.7% or more of the cave is occupied by amoeba, it should turn into boulders.
+When is it 3% and when 25%?
+Initially, the amoeba growth probability is 4/128 (about 3%). Once the "amoeba slow growth time" has elapsed, the amoeba suddenly starts growing a lot quicker (amoeba growth probability = 25%). The "amoeba slow growth time" is set on a cave-by-cave basis, and is in seconds.
+General Algorithm
+procedure ScanAmoeba(in positionType positionOfAmoeba;
+                     in integer anAmoebaRandomFactor;
+                     in Boolean amoebaSuffocatedLastFrame;
+                     inout Boolean atLeastOneAmoebaFoundThisFrameWhichCanGrow;
+                     in integer totalAmoebaFoundLastFrame;
+                     inout integer numberOfAmoebaFoundThisFrame) 
+# Local variables
+    directionType direction;
+    positionType NewPosition;
+
+    ASSERT(anAmoebaRandomFactor > 0);
+    ASSERT(totalAmoebaFoundLastFrame > 0);
+    ASSERT(numberOfAmoebaFoundThisFrame > 0);
+    numberOfAmoebaFoundThisFrame++;
+
+# If the amoeba grew too big last frame, morph into a boulder.
+# kTooManyAmoeba = 200 for original Boulder Dash.
+    if (totalAmoebaFoundLastFrame >= kTooManyAmoeba) then
+        PlaceObject(objBoulder, attribStationary, positionOfAmoeba);
+    else
+
+# If the amoeba suffocated last frame, morph into a diamond
+        if (amoebaSuffocatedLastFrame) then
+            PlaceObject(objDiamond, attribStationary, positionOfAmoeba);
+        else
+
+# If we haven't yet found any amoeba this frame which can grow, we check to 
+# see whether this particular amoeba can grow.
+            if (not atLeastOneAmoebaFoundThisFrameWhichCanGrow) then
+                foreach direction in (up1, left1, right1, down1) do
+                    if (GetObjectAtPosition(GetRelativePosition(positionOfAmoeba, direction)) in {objSpace, objDirt}) then
+                        atLeastOneAmoebaFoundThisFrameWhichCanGrow := true;
+                    endif
+                endforeach
+            endif
+
+# If this amoeba decides to attempt to grow, it randomly chooses a direction, 
+# and if it can grow in that direction, does so.
+            if (AmoebaRandomlyDecidesToGrow(anAmoebaRandomFactor)) then
+                direction := GetRandomDirection();
+                NewPosition = GetRelativePosition(positionOfAmoeba, direction);
+                if (GetObjectAtPosition(NewPosition) in {objSpace, objDirt}) then
+                    PlaceObject(objAmoeba, attribNone, NewPosition);
+                endif
+            endif
+        endif
+    endif 
+endprocedure
+
+##
+
+function AmoebaRandomlyDecidesToGrow(in integer anAmoebaRandomFactor):Boolean 
+# Randomly decide whether this amoeba is going to attempt to grow or not. 
+# anAmoebaRandomFactor should normally be 127 (slow growth) but sometimes is 
+# changed to 15 (fast growth) if the amoeba has been alive too long.
+    ASSERT(anAmoebaRandomFactor in {15, 127});
+    return (GetRandomNumber(0, anAmoebaRandomFactor) < 4); 
+endfunction
+*/

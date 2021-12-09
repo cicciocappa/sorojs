@@ -1,0 +1,122 @@
+<!doctype html>
+
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+
+  <title>SoroJSorig</title>
+  <meta name="description" content="sorojs">
+  <meta name="author" content="francesco">
+
+  
+</head>
+
+<body>
+<img src="60e8.png" id="primo"><img src="5000.png" id="secondo"><img src="5406.png" id="terzo"><img src="63e8.png" id="terzo">
+<canvas width="608" height="512" id="input"></canvas>
+<canvas width="256" height="256" id="output"></canvas>
+<script>
+let imgin = document.getElementById("input").getContext("2d");
+let imgout =  document.getElementById("output").getContext("2d");
+imgin.drawImage(document.getElementById("primo"),0,0);
+imgData = imgin.getImageData(0, 0, 608,248).data;
+var newImageData = imgout.createImageData(256, 256);
+
+function plot(x,y,color,data,width)
+{
+	let index =(x+y*width)*4;
+	data[index]=color[0];
+	data[index+1]=color[1];
+	data[index+2]=color[2];
+	data[index+3]=color[3]	
+}
+
+function peek(x,y,data,width)
+{
+	let index =(x+y*width)*4;
+	switch(data[index])
+	{
+		case 0:
+		return [0,0,0,0];
+		case 85:
+		return [122,122,122,255];
+		case 144:
+		return [186,134,32,255];
+		case 255:
+		return [255,255,255,255];
+		}
+	return [data[index],data[index+1],data[index+2],data[index+3]];
+}
+
+for (let i=0;i<6;i++)
+{
+	for (let j=0;j<16;j++)
+	{ 
+		
+		for (let y=0;y<8;y++)
+		{
+			for (let x=0;x<4;x++)
+			{
+				
+				let px = 33+36*j+8*x
+				let py = 33+i*36+4*y;
+				let ty = i*16+y*2;
+				let tx = j*16+x*4;
+				let col = peek(px,py,imgData,608);
+				plot(tx,ty,col,newImageData.data,256);
+				plot(tx+1,ty,col,newImageData.data,256);
+				plot(tx,ty+1,col,newImageData.data,256);
+				plot(tx+1,ty+1,col,newImageData.data,256);
+				plot(tx+2,ty,col,newImageData.data,256);
+				plot(tx+2,ty+1,col,newImageData.data,256);
+				plot(tx+3,ty,col,newImageData.data,256);
+				plot(tx+3,ty+1,col,newImageData.data,256);
+				}
+			}
+		}
+	}
+		
+	
+	
+ 
+
+
+imgin.drawImage(document.getElementById("terzo"),0,0);
+imgData = imgin.getImageData(0, 0, 608,320).data;
+
+for (let i=0;i<8;i++)
+{
+	for (let j=0;j<16;j++)
+	{ 
+		
+		for (let y=0;y<8;y++)
+		{
+			for (let x=0;x<4;x++)
+			{
+				
+				let px = 33+36*j+8*x
+				let py = 33+i*36+4*y;
+				let ty = 96+i*16+y*2;
+				let tx = j*16+x*4;
+				let col = peek(px,py,imgData,608);
+				plot(tx,ty,col,newImageData.data,256);
+				
+				plot(tx+1,ty,col,newImageData.data,256);
+				plot(tx,ty+1,col,newImageData.data,256);
+				plot(tx+1,ty+1,col,newImageData.data,256);
+				plot(tx+2,ty,col,newImageData.data,256);
+				plot(tx+2,ty+1,col,newImageData.data,256);
+				plot(tx+3,ty,col,newImageData.data,256);
+				plot(tx+3,ty+1,col,newImageData.data,256);
+				 
+				}
+			}
+		}
+	}
+
+imgout.putImageData(newImageData, 0, 0);
+</script>
+33+8 - 33+4  poi 69 poi 105
+69 
+</body>
+</html>
