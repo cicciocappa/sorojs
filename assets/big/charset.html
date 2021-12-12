@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+
+<body>
+    <img src="charset.png" alt="charset" id="charset">
+    <canvas style="border:1px solid #000" id="output" width="320" height="320"></canvas>
+    <script>
+        const src = document.getElementById("charset");
+        src.addEventListener("load", draw);
+        function draw() {
+            const ctx = document.getElementById("output").getContext("2d");
+            for (let y = 0; y < 9; y++) {
+                for (let x = 0; x < 8; x++) {
+                    // image, sx, sy, sWidth, sHeight, dx, dy, dWidth, dHeight
+
+                    ctx.drawImage(src,x*24,y*16,16,8,x*16,y*8,16,8);
+                }
+            }
+        }
+    </script>
+</body>
+
+</html>
