@@ -66,7 +66,7 @@ for (let i = 0; i < 13; i++) {
         }
     }
 }
-for (let i = 13; i < 18; i++) {
+for (let i = 13; i < 19; i++) {
     for (let j = 0; j < 8; j++) {
         data.frames[`tex${i * 8 + j}`] = {
             frame: {
