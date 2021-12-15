@@ -242,7 +242,9 @@ let input = {
     rightPressed: false,
     leftPressed: false,
     downPressed: false,
-    shiftPressed: false
+    upPressed: false,
+    shiftPressed: false,
+    returnPressed: false,
 };
 document.addEventListener('keydown', keyDownHandler, false);
 document.addEventListener('keyup', keyUpHandler, false);
@@ -363,7 +365,7 @@ let level = {
 level.totalTiles = level.width * level.height;
 level.tooManyAmoeba = Math.floor(level.totalTiles * .22);
 
-let transl = {
+const transl = {
     " ": {
         type: SPACE,
         attrib: NONE

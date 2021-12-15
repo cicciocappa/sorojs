@@ -201,8 +201,8 @@ const SetNewGame = () => {
     // creiamo gli sprites per il livello qui?
     // Sì, solo quelli visualizzati però!
     // ne vengono visualizzati 21x12
-    for (let y = 0; y < 12; y++) {
-        for (let x = 0; x < 21; x++) {
+    for (let y = 0; y < 22; y++) {
+        for (let x = 0; x < 40; x++) {
             const c = new PIXI.Sprite(text[7 + x + y]);
             c.x = 32 * x;
             c.y = 32 * y;
@@ -217,7 +217,9 @@ const SetStartingState = () => {
     sfx.intro.stop();
     // effetto sonoro start?
     WriteLine(`PLAYER 1, ${lives} M${lives > 1 ? 'E' : 'A'}N ${String.fromCharCode(65 + cave)}/${level} `, hud, 0);
-
+    let cl = caves[cave].layout.split("\n");
+    console.log(cl[0].length,cl.length);
+    
 
 }
 
@@ -329,7 +331,7 @@ const info = new PIXI.Container();
 app.stage.addChild(container);
 app.stage.addChild(hud);
 app.stage.addChild(info);
-info.y = 320;
+info.y = 304;
 
 app.ticker.maxFPS = 60;
 
