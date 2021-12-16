@@ -1,4 +1,10 @@
 
+const NONE = 0;
+const LEFT = 1;
+const RIGHT = 2;
+const UP = 3;
+const DOWN = 4;
+
 const Keys = {
     rightPressed: false,
     leftPressed: false,
@@ -87,4 +93,4 @@ function GetJoystickPos() {
     return joy;
 }
 
-export {Keys}
+export {Keys,GetJoystickPos}
