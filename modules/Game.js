@@ -456,7 +456,7 @@ const Loop = (delta) => {
                 Scan();    
                 
             }
-            if (tick%4==0){
+            if (tick%2==0){
                 UncoverScreen(uncover_counter);
                 uncover_counter++;
             }
@@ -768,11 +768,12 @@ function GetExplosionType(anObject) {
 }
 
 function UpdateScreen() {
-    for (let j = 0; j < level.height; j++) {
+    for (let j = 0; j < MAP_HEIGHT; j++) {
         for (let i = 0; i < MAP_WIDTH; i++) {
             let n = j * MAP_WIDTH + i;
             if (level.tiles[n].attribute == FALLING) {
                 sprites[n].y = j * TILE_SIZE - 28 + tick * 4;
+                
             }
             if (level.tiles[n].attribute & ROLLING_LEFT) {
                 sprites[n].x = i * TILE_SIZE + 28 - tick * 4;
@@ -953,7 +954,7 @@ function MoveRockfordStage1(pos, JoyPos) {
                 }
             }
             if (RockfordLocation.y - ContainerLocation.y > 9) {
-                if (ContainerLocation.y < level.height - 12) {
+                if (ContainerLocation.y < MAP_HEIGHT - 12) {
                     ContainerLocation.scrollY = +32;
                     ContainerLocation.y++;
                 }
