@@ -1,4 +1,4 @@
-import * as Caves  from './modules/Caves.js';
+
 import {Textures}  from './modules/Textures.js';
 import * as Game  from './modules/Game.js';
 import {Sprites}  from './modules/Sprites.js';
@@ -11,7 +11,8 @@ const app = new PIXI.Application({
 document.body.appendChild(app.view);
 DOM.view = app.view;
 DOM.stage = app.stage;
+DOM.renderer = app.renderer;
 new Sprites(app);
-new Textures(Game.Ready);
+new Textures(sheetdata,Game.Ready);
 app.ticker.maxFPS = 60;
 app.ticker.add(Game.Loop);

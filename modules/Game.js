@@ -5,6 +5,8 @@ import * as Input from './Input.js';
 import { caves } from './Caves.js';
 
 const sfx = {
+    last_time: new Map(),
+    playing: new Set(),
     intro: new Howl({
         src: ['assets/audio/intro.wav'], loop: true, onend: function () {
             intro_timer++;
@@ -18,16 +20,40 @@ const sfx = {
     }),
     passo_vuoto: new Howl({ src: ['assets/audio/passo_vuoto.wav'] }),
     passo_dirt: new Howl({ src: ['assets/audio/passo_dirt.wav'] }),
+    start: new Howl({ src: ['assets/audio/start.wav'] }),
+    uncovering: new Howl({
+        src: ['assets/audio/uncovering.wav'], onstop: function () { sfx.playing.delete("uncovering") }, onend: function () {
+            sfx.playing.delete("uncovering")
+        }, onplay: function () { sfx.playing.add("uncovering") }
+    }),
+    countdown: new Howl({
+        src: ['assets/audio/countdown.wav']
+    }),
+    masso_ic: new Howl({ src: ['assets/audio/masso_inizio.wav'] }),
+    masso_fc: new Howl({ src: ['assets/audio/masso_fine.wav'] }),
+    diamante_ic: new Howl({ src: ['assets/audio/diamante_ic.wav'] }),
+    diamante_fc: new Howl({ src: ['assets/audio/diamante_fc.wav'] }),
+    diamante_preso: new Howl({ src: ['assets/audio/diamante_preso.wav'] }),
+    ultimo_diamante: new Howl({ src: ['assets/audio/ultimo_diamante.wav'] }),
+    esplosione: new Howl({ src: ['assets/audio/esplosione.wav'] }),
+    conteggio: new Howl({ src: ['assets/audio/conteggio.wav'] }),
+    fine_conteggio: new Howl({ src: ['assets/audio/fine_conteggio.wav'] }),
+
 }
 
 const LOADING = 0;
 const READY = 1;
 const INTRO = 2;
-const STARTING = 3;
-const RUNNING = 4;
-const ENDING = 5;
-const DEAD = 6;
-const OVER = 7;
+const UNCOVERING = 3;
+const COVERING = 9;
+const STARTING = 4;
+const RUNNING = 5;
+// end level
+const COMPLETED = 6;
+// dead
+const DEAD = 7;
+const TIMEOUT = 8;
+
 
 // attributes
 const NONE = 0;
@@ -52,6 +78,7 @@ const MAGIC_WALL_EXPIRED = 2;
 const MAP_WIDTH = 40;
 const MAP_HEIGHT = 22;
 const NUM_TILES = MAP_WIDTH * MAP_HEIGHT;
+const TIME_STEP = 1 / 60; // 60 fps
 
 
 
@@ -154,13 +181,16 @@ attributes[MAGIC_WALL] = {
 
 let tick = 0;
 let frame_counter = 0;
-let uncover_counter = 0;
+let global_counter = 0;
 let state = LOADING;
 let intro_timer = 0;
 let demo_mode = false;
-let lives;
+
 let cave;
 let round;
+let countdown_started;
+let already_dead;
+
 let sprites;
 let RockfordLocation = {
     x: 0,
@@ -182,6 +212,7 @@ let RockfordSprite = 9;
 let RockfordFrame = 0;
 let Tapping = false;
 let Blinking = false;
+let PointToTransfer;
 
 let numberOfAmoebaFoundThisFrame = 0;
 let totalAmoebaFoundLastFrame = 0;
@@ -192,18 +223,28 @@ let magicWallStatus = MAGIC_WALL_OFF;
 
 const CurrentPlayerData = {
     score: 0,
-    currentDiamondValue: 20,
+    lives: 3,
+    nextBonusLifeScore: 500,
+    flashScreen: false,
+    currentDiamondValue: 0,
     diamondsCollected: 0,
-    gotEnoughDiamonds: false
+    gotEnoughDiamonds: false,
+    levelTimeElapsed: 0,
+}
+
+const demo = {
+    buffer: 0,
+    current_pointer: 0,
+    current_move: undefined
 }
 
 const level = {
     tiles: [],
     magicWallMillingTime: 0,
     diamond_point: 0,
-    extra_point: 0,
-    diamond_needed: 0,
-    cave_time: 0,
+    extraDiamondValue: 0,
+    diamondsNeeded: 0,
+    caveTime: 0,
 
 
 };
@@ -238,7 +279,7 @@ function Parse(layout) {
             type: DIAMOND,
             attrib: STATIONARY
         },
-        "F": {
+        "q": {
             type: FIREFLY,
             attrib: DIRECTION_LEFT
         },
@@ -269,7 +310,7 @@ function Parse(layout) {
     for (let j = 0; j < MAP_HEIGHT; j++) {
         for (let i = 0; i < MAP_WIDTH; i++) {
             let n = j * MAP_WIDTH + i;
-            //console.log(rows[j].charAt(i), transl[rows[j].charAt(i)])
+            //console.log("car[", rows[j].charAt(i), "]=>", transl[rows[j].charAt(i)])
             tiles[n] = {
                 type: transl[rows[j].charAt(i)].type,
                 attribute: transl[rows[j].charAt(i)].attrib,
@@ -293,7 +334,10 @@ function Ready() {
 
     Sprites.Create('titolo', res['titolo'].texture);
     Sprites.Create('sfondo_titolo', res['sfondo'].texture);
-    let sheet = res['sprites'].spritesheet;
+
+
+
+    let sheet = Textures.sheet;
     for (let i = 0; i < 152; i++) {
         const texture = sheet.textures[`tex${i}`];
         Textures.tx.push(texture);
@@ -315,37 +359,73 @@ function Ready() {
             const c = new PIXI.Sprite(Textures.tx[120]);
 
             c.x = 32 * i;
-            c.y = 16 * j;
-            Sprites.info.addChild(c)
+            c.y = 16 * j + 304;
+            Sprites.intro.addChild(c)
         }
 
     }
+    sprites = [];
+    for (let y = 0; y < MAP_HEIGHT; y++) {
+        for (let x = 0; x < MAP_WIDTH; x++) {
+            const c = new PIXI.Sprite(Textures.tx[7]);
+            c.x = 32 * x;
+            c.y = 32 * y;
+            c.anchor.set(0);
+            Sprites.container.addChild(c);
+            sprites.push(c);
+        }
+    }
+    Sprites.container.visible = false;
+    Sprites.intro.addChild(Sprites.sp["sfondo_titolo"]);
+    Sprites.intro.addChild(Sprites.sp["titolo"]);
+    Sprites.sp["titolo"].y = 32;
+    Sprites.sp["sfondo_titolo"].visible = false;
+    Sprites.sp["titolo"].visible = false;
 
     SetReadyState();
 }
 
+function ResetScreen() {
+    for (let y = 0; y < MAP_HEIGHT; y++) {
+        for (let x = 0; x < MAP_WIDTH; x++) {
+            const c = Sprites.container.children[y * MAP_WIDTH + x];
+            c.x = 32 * x;
+            c.y = 32 * y;
+
+        }
+    }
+}
+
 function SetReadyState() {
     //        "01234567890123456789"
-    Sprites.WriteLine("     GAME READY     ", Sprites.info, 0);
-    Sprites.WriteLine("   CLICK TO START   ", Sprites.info, 3, 0XCCCCFF);
+    Sprites.WriteLine("     GAME READY     ", Sprites.intro, 0);
+    Sprites.WriteLine("   CLICK TO START   ", Sprites.intro, 3, 0XCCCCFF);
     state = READY;
     DOM.view.addEventListener("click", ReadyClicked);
+
+
+
+
 }
 
 function ReadyClicked() {
     console.log("ready clicked");
     DOM.view.removeEventListener("click", ReadyClicked);
+    Sprites.sp["sfondo_titolo"].visible = true;
+    Sprites.sp["titolo"].visible = true;
+
     SetIntroState();
 }
 
 function SetIntroState() {
-    //console.log(text);
+    console.log("INTRO");
+    Input.Keys.enterFull = false;
+    Sprites.intro.visible = true;
+    Sprites.container.visible = false;
 
     // testo("CICCIOCAPPA PRESENTS".charAt(i))
-    Sprites.WriteLine("CICCIOCAPPA PRESENTS", Sprites.hud, 0, 0XFFFF33);
-    Sprites.container.addChild(Sprites.sp["sfondo_titolo"]);
-    Sprites.container.addChild(Sprites.sp["titolo"]);
-    Sprites.sp["titolo"].y = 32;
+    Sprites.WriteLine("CICCIOCAPPA PRESENTS", Sprites.hud, 0, 0Xbfce72);
+
 
     const introtext = ["   BY PETER LIEPA   ",
         "   WITH CHRIS GRAY  ",
@@ -355,52 +435,86 @@ function SetIntroState() {
     ]
 
     for (let i = 0; i < introtext.length; i++) {
-        Sprites.WriteLine(introtext[i], Sprites.info, i);
+        Sprites.WriteLine(introtext[i], Sprites.intro, i);
     }
 
-    Sprites.info.children[60].tint = 0xFF00FF;
-    Sprites.info.children[70].tint = 0xFF00FF;
-    Sprites.info.children[87].tint = 0xFF00FF;
-    Sprites.info.children[97].tint = 0xFF00FF;
+    Sprites.intro.children[60].tint = 0x8b3f96;
+    Sprites.intro.children[70].tint = 0x8b3f96;
+    Sprites.intro.children[87].tint = 0x8b3f96;
+    Sprites.intro.children[97].tint = 0x8b3f96;
 
 
     intro_timer = 0;
+    sfx.uncovering.stop();
     sfx.intro.play();
     state = INTRO;
+
+    demo.buffer = 0;
+    demo.current_pointer = 0;
+}
+
+function SetCompletedState() {
+    state = COMPLETED;
+    PointToTransfer = level.caveTime - Math.round(CurrentPlayerData.levelTimeElapsed);
+    sfx.conteggio.play();
+    tick = 0;
+    cave++;
+    cave--;
+    if (cave == 99) {
+        cave = 0;
+        if (round < 5) round++;
+    }
+}
+function SetDeadState() {
+    state = DEAD;
+    already_dead = true;
+    CurrentPlayerData.lives--;
 }
 
 const SetNewGame = () => {
+    console.log("NEW GAME");
     // resettare gli sprites ad inizio gioco?
-    sprites = [];
-    lives = 3;
+    Input.Keys.enterFull = false;
+    CurrentPlayerData.lives = 3;
     round = 1;
     cave = 0;
-    Sprites.container.removeChild(Sprites.sp["titolo"]);
-    Sprites.container.removeChild(Sprites.sp["sfondo_titolo"]);
-    DOM.stage.removeChild(Sprites.info);
-    Sprites.container.y = 32;
+    CurrentPlayerData.score = 0;
+    CurrentPlayerData.nextBonusLifeScore = 500;
+    CurrentPlayerData.flashScreen = false;
+    //Sprites.container.removeChild(Sprites.sp["titolo"]);
+    //Sprites.container.removeChild(Sprites.sp["sfondo_titolo"]);
+    //DOM.stage.removeChild(Sprites.info);
+    //Sprites.container.y = 32;
     // creiamo gli sprites per il livello qui?
     // Sì, solo quelli visualizzati però!
     // ne vengono visualizzati 21x12
-    for (let y = 0; y < 22; y++) {
-        for (let x = 0; x < 40; x++) {
-            const c = new PIXI.Sprite(Textures.tx[7]);
-            c.x = 32 * x;
-            c.y = 32 * y;
-            c.anchor.set(0);
-            Sprites.container.addChild(c);
-            sprites.push(c);
-        }
-    }
+
+    // SE SONO GIA PRESENTI LI VISUALIZZIAMO,
+    // ALTRIMENTI LI NASCONDIAMO
+    Sprites.intro.visible = false;
+    Sprites.container.visible = true;
+
+
 }
-const SetStartingState = () => {
+
+
+
+
+
+const SetUncoveringState = () => {
+
+    console.log("UNCOVERING")
+    console.log(Sprites.container.children[678].x);
+
     tick = 0;
     frame_counter = 0;
-    uncover_counter = 0;
-    state = STARTING;
+    global_counter = 0;
+    state = UNCOVERING;
+    countdown_started = false;
+    already_dead = false;
     sfx.intro.stop();
     // effetto sonoro start?
-    Sprites.WriteLine(`PLAYER 1, ${lives} M${lives > 1 ? 'E' : 'A'}N ${String.fromCharCode(65 + cave)}/${round} `, Sprites.hud, 0);
+    Sprites.WriteLine(`PLAYER 1, ${CurrentPlayerData.lives} M${CurrentPlayerData.lives > 1 ? 'E' : 'A'}N ${String.fromCharCode(65 + cave)}/${round} `, Sprites.hud, 0);
     let cl = caves[cave].layout.split("\n");
     console.log(cl[0].length, cl.length);
     // inizializzo variabili di livello
@@ -408,9 +522,12 @@ const SetStartingState = () => {
     //console.log(level.tiles);
     level.magicWallMillingTime = caves[cave].amoeba_wall_time;
     level.diamond_point = caves[cave].diamond_point;
-    level.extra_point = caves[cave].extra_point;
-    level.diamond_needed = caves[cave].diamond_needed[round - 1];
-    level.cave_time = caves[cave].cave_time[round - 1];
+    level.extraDiamondValue = caves[cave].extra_point;
+    level.diamondsNeeded = caves[cave].diamond_needed[round - 1];
+    level.caveTime = caves[cave].cave_time[round - 1];
+    CurrentPlayerData.currentDiamondValue = level.diamond_point;
+    CurrentPlayerData.diamondsCollected = 0;
+    CurrentPlayerData.gotEnoughDiamonds = false;
     // inizializzo variabili di gioco
     numberOfAmoebaFoundThisFrame = 0;
     totalAmoebaFoundLastFrame = 0;
@@ -418,18 +535,89 @@ const SetStartingState = () => {
     atLeastOneAmoebaFoundThisFrameWhichCanGrow = false;
     anAmoebaRandomFactor = 0.25;
     magicWallStatus = MAGIC_WALL_OFF;
+    if (!sfx.playing.has("uncovering")) sfx.uncovering.play();
+    console.log(sfx.uncovering);
+    // SPOSTARE IN "NUOVA CAVA"
+    Textures.SetColors(caves[cave].colors);
+    // SPOSTARE IN NUOVA CAVA
+}
 
+
+const SetCoveringState = () => {
+    // CONTROLLIAMO QUI SE ABBIAMO ANCORA VITE
+    console.log("COVERING resetto lo schermo");
+    ResetScreen();
+    console.log(Sprites.container.children[678].x);
+    //debugger;
+    tick = 0;
+    frame_counter = 0;
+    global_counter = 0;
+
+    state = COVERING;
+
+    if (CurrentPlayerData.lives < 1) {
+        // scritta game over
+        Sprites.WriteLine(" G A M E   O V E R  ", Sprites.hud, 0);
+    }
+    if (!sfx.playing.has("uncovering")) sfx.uncovering.play();
+    console.log("esco da setcovering con");
+  
+    console.log(Sprites.container.children[678].x);
+
+}
+
+const SetStartingState = () => {
+    console.log("STARTING");
+    Input.Keys.enterFull = false;
+    tick = 0;
+    frame_counter = 0;
+    global_counter = 0;
+    state = STARTING;
+    sfx.uncovering.stop();
 
 }
 
 const SetRunningState = () => {
-
+    //let s = " "+level.diamondsNeeded+"*"+level.diamond_point+" 00 "+ 
+    Sprites.WriteLine(` ${level.diamondsNeeded.toString().padStart(2, '0')}^${level.diamond_point} 00 ${level.caveTime.toString().padStart(3, '0')} ${CurrentPlayerData.score.toString().padStart(6, '0')}`, Sprites.hud, 0);
+    Sprites.ColorHud(0Xbfce72, 0, 3);
+    Sprites.ColorHud(0Xbfce72, 7, 2);
     state = RUNNING;
+    sfx.start.play();
+    CurrentPlayerData.levelTimeElapsed = 0;
+}
+
+const SetTimeOutState = () => {
+    tick = 0;
+    frame_counter = 0;
+    global_counter = 0;
+    state = TIMEOUT;
+    if (!already_dead) {
+        CurrentPlayerData.lives--;
+    }
+
+    Sprites.WriteLine("     OUT OF TIME    ", Sprites.hud, 0);
+
 }
 
 
+const AlternateTimeout = (frame) => {
+
+    if (frame === 300) {
+        Sprites.WriteLine("     OUT OF TIME    ", Sprites.hud, 0);
+        global_counter = 0;
+    }
+    if (frame === 100) {
+        Sprites.WriteLine(` ${level.diamondsNeeded.toString().padStart(2, '0')}^${level.diamond_point} ${CurrentPlayerData.diamondsCollected.toString().padStart(2, '0')} 000 ${CurrentPlayerData.score.toString().padStart(6, '0')}`, Sprites.hud, 0);
+        Sprites.ColorHud(0Xbfce72, 0, 3);
+        Sprites.ColorHud(0Xbfce72, 7, 2);
+
+    }
+}
+
 const IncTick = () => {
     tick++;
+    CurrentPlayerData.levelTimeElapsed += TIME_STEP;
     if (tick == 8) {
         tick = 0;
         frame_counter++;
@@ -439,7 +627,12 @@ const IncTick = () => {
     }
 }
 
+
 const Loop = (delta) => {
+
+    console.log("entro il loop con",state);
+
+    console.log(Sprites.container.children[678]?.x);
     //console.log(state);
     switch (state) {
         case INTRO:
@@ -448,17 +641,52 @@ const Loop = (delta) => {
             if (Input.Keys.enterPressed) {
                 demo_mode = false;
                 SetNewGame();
-                SetStartingState();
+                SetUncoveringState();
             }
+            break;
+        case COVERING:
+            if (tick % 2 == 0) {
+                CoverScreen(global_counter);
+                global_counter++;
+            }
+            UpdateSprites();
+            // UpdateScreen();
+            console.log("sto effettuando covering");
+            console.log(Sprites.container.children[678].x);
+            //if (Sprites.container.children[678].x==1188) debugger;
+            IncTick();
+            break;
+        case UNCOVERING:
+            console.log("sto effettuando UNCOVERING");
+            console.log(Sprites.container.children[678].x);
+            if (tick % 2 == 0) {
+                UncoverScreen(global_counter);
+                global_counter++;
+            }
+            if (tick == 0) {
+                PanToRockford();
+            }
+
+            UpdateSprites();
+            console.log("prima di update screen");
+            console.log(Sprites.container.children[678].x);
+            
+            UpdateScreen();
+            
+            console.log("dopo update screen");
+            console.log(Sprites.container.children[678].x);
+            
+            IncTick();
             break;
         case STARTING:
             if (tick == 0) {
-                Scan();    
-                
+                Scan();
+
             }
-            if (tick%2==0){
-                UncoverScreen(uncover_counter);
-                uncover_counter++;
+            global_counter++;
+            //console.log(global_counter);
+            if (global_counter === 192) {
+                SetRunningState();
             }
             UpdateSprites();
             UpdateScreen();
@@ -467,7 +695,15 @@ const Loop = (delta) => {
         case RUNNING:
 
             if (tick == 0) {
+                numRoundsSinceRockfordSeenAlive++;
+                UpdateTime();
                 Scan();
+            }
+            if (numRoundsSinceRockfordSeenAlive > 1) {
+                SetDeadState();
+            }
+            if (Input.Keys.enterFull && demo_mode) {
+                SetIntroState();
             }
             AnimateRockford();
             UpdateSprites();
@@ -476,36 +712,119 @@ const Loop = (delta) => {
             IncTick();
 
             break;
+        case DEAD:
+            if (tick == 0) {
+
+                UpdateTime();
+                Scan();
+            }
+            if (Input.Keys.enterPressed) {
+                SetCoveringState();
+            }
+            AnimateRockford();
+            UpdateSprites();
+            UpdateScreen();
+
+            IncTick();
+            break;
+        case TIMEOUT:
+            IncTick();
+
+            UpdateSprites();
+            global_counter++;
+            //console.log(global_counter);
+            if (global_counter === 100 || global_counter === 300) {
+                AlternateTimeout(global_counter);
+            }
+            if (Input.Keys.enterPressed) {
+                SetCoveringState();
+            }
+            break;
+
+
+        case COMPLETED:
+            if (tick < 7) {
+                tick++;
+            }
+
+           
+            UpdateScreen();
+            UpdateSprites();
+            TransferPoint();
+            break;
     }
 }
 
+function CoverScreen(frame) {
+    //console.log(frame);
+    if (frame < 21) {
+        for (let y = 0; y < 22; y++) {
+            let x = Math.floor(Math.random() * 40);
+            level.tiles[y * MAP_WIDTH + x].covered = true;
+            x = Math.floor(Math.random() * 40);
+            level.tiles[y * MAP_WIDTH + x].covered = true;
+            x = Math.floor(Math.random() * 40);
+            level.tiles[y * MAP_WIDTH + x].covered = true;
+        }
+
+    }
+    if (frame === 21) {
+
+        for (let i = 0; i < NUM_TILES; i++) {
+            //sprites[i].texture = Textures.tx[attributes[level.tiles[i].type].texture];
+            level.tiles[i].covered = true;
+        }
+
+    }
+    if (frame === 30 && CurrentPlayerData.lives > 0) {
+        SetUncoveringState();
+    }
+    if (frame === 60) {
+        // alert("back to intro");
+        SetIntroState();
+    }
+
+
+
+}
+
 function UncoverScreen(frame) {
-    console.log(frame);
+    //console.log(frame);
     if (frame < 69) {
-        for (let y=0;y<22;y++){
-            let x = Math.floor(Math.random()*40);
-            level.tiles[y*MAP_WIDTH+x].covered = false;
+        for (let y = 0; y < 22; y++) {
+            let x = Math.floor(Math.random() * 40);
+            level.tiles[y * MAP_WIDTH + x].covered = false;
         }
 
     }
     if (frame === 69) {
-        console.log("UNCOVER")
+
         for (let i = 0; i < NUM_TILES; i++) {
             //sprites[i].texture = Textures.tx[attributes[level.tiles[i].type].texture];
             level.tiles[i].covered = false;
         }
-        SetRunningState();
+        SetStartingState();
     }
-    /*
-    loop 69 times
-    foreach line in 1..22
-        randomly choose a horizontal position on that line
-        uncover that position
-    end foreach 
-    end loop 
-    uncover entire screen
-    */
+
 }
+
+function UpdateTime() {
+    // check for time out
+    let time = level.caveTime - Math.round(CurrentPlayerData.levelTimeElapsed);
+    if (time < 11 && !countdown_started) {
+        sfx.countdown.play();
+        countdown_started = true;
+    }
+    if (time < 0) {
+        // TIMEOUT
+        SetTimeOutState();
+    } else {
+        Sprites.UpdateHud(time.toString().padStart(3, '0'), 10);
+    }
+}
+
+
+
 
 function Scan() {
     //console.log("scanning...");
@@ -617,6 +936,12 @@ function ScanStationaryBoulder(pos, type) {
     if (theObjectBelow.type == SPACE) {
         PlaceObject(type, FALLING, NewPosition);
         PlaceObject(SPACE, NONE, boulderPosition);
+        if (type === DIAMOND) {
+            PlaySeparated("diamante_ic");
+        } else {
+            PlaySeparated("masso_ic");
+        }
+
         //    RequestSound(boulderSound); // yes, even when it starts falling. This applies to diamonds too (requests diamondSound).
     } else {
         // Failing that, see if the boulder can roll
@@ -675,11 +1000,19 @@ function ScanFallingBoulder(pos, type) {
         }
         PlaceObject(SPACE, NONE, boulderPosition);
         //RequestSound(diamondSound); // note: Diamond sound
+        PlaySeparated("diamante_ic");
     }
 
     // Failing that, we've hit something, so we play a sound and see if we can roll.
     else {
-        // RequestSound(boulderSound);
+        //RequestSound(boulderSound);
+        if (type === DIAMOND) {
+            PlaySeparated("diamante_fc");
+        } else {
+            PlaySeparated("masso_fc");
+
+        }
+
         if (CanRollOff(theObjectBelow)) {
             //console.log("posso rotolare falling...");
             //debugger;
@@ -716,7 +1049,7 @@ function ScanFallingBoulder(pos, type) {
 }
 
 function Explode(pos, type) {
-
+    sfx.esplosione.play();
     let startAnimation = 5;
     if (type == BUTTERFLY) {
         startAnimation = 0;
@@ -771,9 +1104,16 @@ function UpdateScreen() {
     for (let j = 0; j < MAP_HEIGHT; j++) {
         for (let i = 0; i < MAP_WIDTH; i++) {
             let n = j * MAP_WIDTH + i;
-            if (level.tiles[n].attribute == FALLING) {
+            if (level.tiles[n].type === OUTBOX) {
+                vdebug("outbox x", i);
+                vdebug("outbox y", j);
+                vdebug("children", n);
+                vdebug("container children", Sprites.container.children[n].x);
+                vdebug("sprites[n]", sprites[n].x);
+            }
+            if (level.tiles[n].attribute === FALLING) {
                 sprites[n].y = j * TILE_SIZE - 28 + tick * 4;
-                
+
             }
             if (level.tiles[n].attribute & ROLLING_LEFT) {
                 sprites[n].x = i * TILE_SIZE + 28 - tick * 4;
@@ -783,6 +1123,7 @@ function UpdateScreen() {
             }
             if (level.tiles[n].attribute & MOVING_LEFT) {
                 sprites[n].x = i * TILE_SIZE + 28 - tick * 4;
+
             }
             if (level.tiles[n].attribute & MOVING_RIGHT) {
                 sprites[n].x = i * TILE_SIZE - 28 + tick * 4;
@@ -825,16 +1166,36 @@ function UpdateScreen() {
 
 }
 
+
+function PlaySeparated(sound) {
+    let ct = (new Date()).getTime();
+    if (sfx.last_time.has(sound)) {
+
+        if (ct - sfx.last_time.get(sound) < 100) {
+            return;
+        }
+    }
+    sfx[sound].play();
+    sfx.last_time.set(sound, ct);
+}
+
 function UpdateSprites() {
     //console.log(level.tiles[0]);
     for (let i = 0; i < NUM_TILES; i++) {
         if (level.tiles[i].covered) {
-            sprites[i].texture = Textures.tx[100 + ((tick>>1) % 4)];
+            sprites[i].texture = Textures.tx[100 + ((tick >> 1) % 4)];
         } else {
             if (attributes[level.tiles[i].type].animated) {
                 sprites[i].texture = Textures.tx[attributes[level.tiles[i].type].texture + frame_counter];
             } else {
                 switch (level.tiles[i].type) {
+                    case SPACE:
+                        if (CurrentPlayerData.flashScreen) {
+                            sprites[i].texture = Textures.tx[13 + (frame_counter % 2)];
+                        } else {
+                            sprites[i].texture = Textures.tx[16];
+                        }
+                        break;
                     case MAGIC_WALL:
                         if (level.magicWallStatus === MAGIC_WALL_ON) {
                             sprites[i].texture = Textures.tx[96 + (frame_counter % 4)];
@@ -842,10 +1203,21 @@ function UpdateSprites() {
                             sprites[i].texture = Textures.tx[1];
                         }
                         break;
+                    case OUTBOX:
 
+                        if (CurrentPlayerData.gotEnoughDiamonds) {
+                            sprites[i].texture = Textures.tx[10 * (frame_counter % 2) + 7];
+                        } else {
+                            sprites[i].texture = Textures.tx[7];
+                        }
+
+
+                        break;
                     case ROCKFORD:
 
                         sprites[i].texture = Textures.tx[RockfordSprite];
+
+
                         break;
                     case INBOX:
                         //console.log(animazioneInbox[level.tiles[i].attribute >> 16]);
@@ -862,6 +1234,56 @@ function UpdateSprites() {
         }
     }
 
+}
+
+function GetNextDemoMovement() {
+    /* The format of the demo data is as follows. The low nybble of each byte indicates the direction that Rockford is to move ($0 = end of demo, $7 = Right, $B = Left, $D = Down, $E = Up, $F = no movement). The high nybble indicates the number of spaces (number of frames) to apply that movement. The demo finishes when it hits $00. So for example, $FF means no movement for 15 turns, $1E means move up one space, $77 means move right 7 spaces, etc.
+
+FF FF 1E 77 2D 97 4F 2D 47 3E 1B 4F 1E B7 1D 27 
+4F 6D 17 4D 3B 4F 1D 1B 47 3B 4F 4E 5B 3E 5B 4D 
+3B 5F 3E AB 1E 3B 1D 6B 4D 17 4F 3D 47 4D 4B 2E 
+27 3E A7 A7 1D 47 1D 47 2D 5F 57 4E 57 6F 1D 00
+*/
+
+    // debugger;
+    const demo_data = ["FF", "FF", "1E", "77", "2D", "97", "4F", "2D", "47", "3E", "1B", "4F", "1E", "B7", "1D", "27",
+        "4F", "6D", "17", "4D", "3B", "4F", "1D", "1B", "47", "3B", "4F", "4E", "5B", "3E", "5B", "4D",
+        "3B", "5F", "3E", "AB", "1E", "3B", "1D", "6B", "4D", "17", "4F", "3D", "47", "4D", "4B", "2E",
+        "27", "3E", "A7", "A7", "1D", "47", "1D", "47", "2D", "5F", "57", "4E", "57", "6F", "1D", "00"];
+
+    if (demo.buffer > 1) {
+        demo.buffer--;
+        return demo.current_move;
+    }
+    demo.current_pointer++;
+    const cd = demo_data[demo.current_pointer];
+    if (cd === "00") {
+        // demo finita, si ritorna ad intro
+        SetIntroState();
+        return;
+    }
+    demo.buffer = parseInt(cd.charAt(0), 16);
+    let dir;
+    switch (cd.charAt(1)) {
+        case '7':
+            dir = RIGHT;
+            break;
+        case 'B':
+            dir = LEFT;
+            break;
+        case 'D':
+            dir = DOWN;
+            break;
+        case 'E':
+            dir = UP;
+            break;
+        default:
+            dir = NONE;
+            break;
+
+    }
+    demo.current_move = { direction: dir };
+    return demo.current_move;
 }
 
 function ScanRockford(pos) {
@@ -1023,11 +1445,13 @@ function MoveRockfordStage3(newPosition, JoyPos) {
         // Space: move there, and play a sound (lower pitch white noise)
         case SPACE:
             movementSuccessful = true;
+            sfx.passo_vuoto.play();
             //RequestRockfordMovementSound(movingThroughSpace);
             break;
         // Dirt: move there, and play a sound (higher pitch white noise)
         case DIRT:
             movementSuccessful = true;
+            sfx.passo_dirt.play();
             //RequestRockfordMovementSound(movingThroughDirt);
             break;
         // Diamond: pick it up
@@ -1039,8 +1463,11 @@ function MoveRockfordStage3(newPosition, JoyPos) {
             break;
         // OutBox: flag that we've got out of the cave
         case OUTBOX:
-            movementSuccessful = true;
-            FlagThatWeAreExitingTheCave("and that we got out alive");
+            if (CurrentPlayerData.gotEnoughDiamonds) {
+                movementSuccessful = true;
+                //FlagThatWeAreExitingTheCave("and that we got out alive");
+                SetCompletedState();
+            }
             break;
         // Boulder: push it
         case BOULDER:
@@ -1064,6 +1491,36 @@ function MoveRockfordStage3(newPosition, JoyPos) {
     // Return an indication of whether we were successful in moving.
     return movementSuccessful;
 }
+
+
+function PanToRockford() {
+    if (RockfordLocation.x - ContainerLocation.x > 10) {
+        if (ContainerLocation.x < MAP_WIDTH - 20) {
+            ContainerLocation.scrollX = +32;
+            ContainerLocation.x++;
+        }
+    }
+    if (RockfordLocation.x - ContainerLocation.x < 3) {
+        if (ContainerLocation.x > 0) {
+            ContainerLocation.scrollX = -32;
+            ContainerLocation.x--;
+        }
+    }
+    if (RockfordLocation.y - ContainerLocation.y > 6) {
+        if (ContainerLocation.y < MAP_HEIGHT - 12) {
+            ContainerLocation.scrollY = +32;
+            ContainerLocation.y++;
+        }
+    }
+    if (RockfordLocation.y - ContainerLocation.y < 3) {
+        if (ContainerLocation.y > 0) {
+            ContainerLocation.scrollY = -32;
+            ContainerLocation.y--;
+        }
+    }
+}
+
+
 function PushBoulder(newBoulderPosition, move) {
     // There is a 12.5% (1 in 8) than Rockford will succeed in pushing the boulder.
     // Return true if boulder successfully pushed, false if not.
@@ -1074,6 +1531,8 @@ function PushBoulder(newBoulderPosition, move) {
     pushSuccessful = (Math.random() < .125);
     if (pushSuccessful) {
         // RequestSound(boulderSound);
+        //sfx.masso_ic.play();
+        PlaySeparated("masso_ic");
         //PlaceBoulder(newBoulderPosition);
         PlaceObject(BOULDER, move | FALLING, newBoulderPosition);
     }
@@ -1097,18 +1556,70 @@ function PickUpDiamond() {
 ////
 
 function CheckEnoughDiamonds() {
+    Sprites.UpdateHud(CurrentPlayerData.diamondsCollected.toString().padStart(2, '0'), 7);
+    Sprites.UpdateHud(CurrentPlayerData.score.toString().padStart(6, '0'), 14);
     if (CurrentPlayerData.diamondsCollected == level.diamondsNeeded) {
         CurrentPlayerData.gotEnoughDiamonds = true;
         CurrentPlayerData.currentDiamondValue = level.extraDiamondValue;
         UpdateStatusbar();
         // RequestSound(crackSound);
+        sfx.ultimo_diamante.play();
         RequestFlash();
+    } else {
+        sfx.diamante_preso.play();
     }
 }
 
-function CheckForBonusLife() { }
-function UpdateStatusbar() { console.log("status bar [abbastanza diamanti]") }
-function RequestFlash() { console.log("lampeggia schermo") }
+function CheckForBonusLife() {
+    //console.log("controllo bonus", CurrentPlayerData.score, CurrentPlayerData.nextBonusLifeScore);
+    if (CurrentPlayerData.score >= CurrentPlayerData.nextBonusLifeScore) {
+        console.log("chiamo addlife");
+        AddLife();
+        CurrentPlayerData.nextBonusLifeScore += 500;
+    }
+}
+
+function AddLife() {
+    if (CurrentPlayerData.lives < 9) {
+        console.log("aggiungo vita");
+        CurrentPlayerData.lives++;
+        CurrentPlayerData.flashScreen = true;
+        setTimeout(() => { CurrentPlayerData.flashScreen = false }, 5000);
+    }
+}
+
+function UpdateStatusbar() {
+    Sprites.UpdateHud(" ^^^" + CurrentPlayerData.currentDiamondValue, 0);
+    Sprites.ColorHud(0xFFFFFF, 0, 4);
+
+}
+function RequestFlash() {
+    DOM.renderer.backgroundColor = 0xFFFFFF;
+    setTimeout(() => { DOM.renderer.backgroundColor = 0 }, 66);
+}
+
+function TransferPoint() {
+    if (PointToTransfer < 0) {
+
+        if (PointToTransfer == -30) {
+            SetCoveringState();
+        }
+        PointToTransfer--;
+    } else {
+        if (PointToTransfer == 0) {
+            sfx.conteggio.stop();
+            sfx.fine_conteggio.play();
+
+        }
+        Sprites.UpdateHud(PointToTransfer.toString().padStart(3, '0'), 10);
+        CurrentPlayerData.score += round;
+        CheckForBonusLife();
+        // COME GESTIAMO IL BONUS VITA?
+        Sprites.UpdateHud(CurrentPlayerData.score.toString().padStart(6, '0'), 14);
+        PointToTransfer--;
+
+    }
+}
 
 ////
 
@@ -1367,7 +1878,17 @@ function AmoebaRandomlyDecidesToGrow(anAmoebaRandomFactor) {
     return (Math.random() < anAmoebaRandomFactor);
 }
 
+function vdebug(q, val) {
+    if (!document.getElementById(q)) {
+        var newpanel = document.createElement('div');
+        newpanel.id = q;
+        newpanel.className = "dbgp";
+        newpanel.innerHTML = '<b>' + q + ':</b> <span id="val' + q + '"><span>';
+        document.getElementById("dbgpan").appendChild(newpanel);
+    }
+    document.getElementById("val" + q).textContent = JSON.stringify(val);
 
+}
 
 
 

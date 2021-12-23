@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <script src="pixi.min.js"></script>
+</head>
+
+<body>
+    <canvas id="schermo" width="800" height="600" style="border:1px solid #ccc;background-color: #000;"></canvas>
+    <button onclick="prova()">PROVA</button>
+    <script>
+
+        const dati = [
+            "00003F3F000000C00280028002805555",
+            "3C931F1F0000CC0C330003C003C05555",
+            "90BB1515000000000823082009A04141",
+            "3CBF000000000CCC0C700C700D705151",
+            "0997F3F300303000010821082BD87171",
+            "0993F1F10C000030000C30CC375C5555",
+            "3C93515130C0C003841287929EBE5555",
+            "00000000030C0000C003E147F7DB5555",
+            "00003F3F00C000008001832997795555",
+            "99001F1F0C00C00CC403C443DEEB5555",
+            "99001515303000000014283427B44141",
+            "3C00000003C030C3310C314C366C5151",
+            "2400F3F30000030008900B100BD07171",
+            "2400F1F10000C00C0C030CB00DB05555",
+            "2400515100000C003240024002405555",
+            "000000000000000003C003C003C05555",
+            "3F3F00000FC008220280F0F00F0FF00F",
+            "1F1F041037B0A08203C0000000003FFC",
+            "15150550EDFC2624082000000000F7DF",
+            "0000114479BFA2A20C3000000000F7DF",
+            "F3F31144567F8A8A20080F0FF0F0FFFF",
+            "F1F1055065671898300C000000003C3C",
+            "515101405A5F694A8002000000000F30",
+            "0000055055678AA4C003000000000550",
+            "000013C445562A6A8001F0F00F0FA558",
+            "0000314C516692A4C003000000008552",
+            "003003C0455598622004000000000558",
+            "0003014051551A26300C000000003FFC",
+            "05320BE05454888808100F0FF0F03C3C",
+            "052408201554A0A20C3000000000300C",
+            "0710082004908920024000000000F00C",
+            "07E13C3C0140208803C000000000000F",
+            "00005555FF3F000000000000FF3F3F3F",
+            "00004001DF3F000000000000DF3F1F1F",
+            "00004001D5350000000030CCD5351D17",
+            "00004001C030000000300310C0300C03",
+            "00004001F3FF00300320322CF3FFF3F3",
+            "00004001F3FD0C00380C2408F3FDF1F1",
+            "00004001535D30C020B81064535D71D1",
+            "00004001030C030C3208E104030C30C0",
+            "00004001BCBC00C000B000A055000000",
+            "00004001BCBC0C003880E48C55F00000",
+            "00004001BCBC30302220112041000000",
+            "00004001BCBC03C00E8C098851000000",
+            "000040011FFF00000CC0C88C71000000",
+            "0000400100BC0000000003C0550F0000",
+            "0000400100BC00000000300055000000",
+            "0000555500BC00000000000055000000",
+            "FFBFFFBFFE2FFE2FF80BF80BFE2FFE2F",
+            "FFFFFFFFFFBFFFBFFE2FFE2FFFBFFFBF",
+            "BFFFBFFFFFFEFFFEFFBFFFBFFFFFFFFF",
+            "2FFE2FFEBFF8BFF8FFFEFFFEBFFFBFFF",
+            "2FFE2FFE2FE82FE8BFF8BFF82FFE2FFE",
+            "2FFE2FFEBFF8BFF8FFFEFFFEBFFFBFFF",
+            "BFFFBFFFFFFEFFFEFFFFFFFFFFFFFFFF",
+            "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF",
+            "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF",
+            "BFFEBFFEFFFFFFFFFFFFFFFFFFFFFFFF",
+            "2FF82FF8BFFEBFFEFFFFFFFFAFFEAFFE",
+            "2FF82FF82FF82FF8FFFFFFFF2FF82FF8",
+            "2FF82FF8BFFEBFFEFFFFFFFFAFFEAFFE",
+            "BFFEBFFEFFFFFFFFFFBFFFBFFFFFFFFF",
+            "FFFFFFFFFFBFFFBFFE2FFE2FFFBFFFBF",
+            "FFFFFFFFFE2FFE2FF80BF80BFE2FFE2F",
+            "AAAAAAAA00000000AAAAAAAAFFFFFFFF",
+            "AAAAAAAA00000000AAAAAAAAFFFFFFFF",
+            "800280022AA82AA8BFFEBFFEEAABEAAB",
+            "800280022AA82AA8BFFEBFFEEAABEAAB",
+            "8AA28AA22FF82FF8BAAEBAAEE00BE00B",
+            "8AA28AA22FF82FF8BAAEBAAEE00BE00B",
+            "8BE28BE22EB82EB8B82EB82EE28BE28B",
+            "8BE28BE22EB82EB8B82EB82EE28BE28B",
+            "8BE28BE22EB82EB8B82EB82EE28BE28B",
+            "8BE28BE22EB82EB8B82EB82EE28BE28B",
+            "8AA28AA22FF82FF8BAAEBAAEE00BE00B",
+            "8AA28AA22FF82FF8BAAEBAAEE00BE00B",
+            "800280022AA82AA8BFFEBFFEEAABEAAB",
+            "800280022AA82AA8BFFEBFFEEAABEAAB",
+            "AAAAAAAA00000000AAAAAAAAFFFFFFFF",
+            "AAAAAAAA00000000AAAAAAAAFFFFFFFF",
+            "02C002C002C002C002C002C002C002C0",
+            "03800380038003800380038003800380",
+            "0BF00BF00AB00BF0083008300BF00AB0",
+            "0FE00EA00FE00C200C200FE00EA00FE0",
+            "2AAC2FFC200C200C2FFC2AAC2FFC2FFC",
+            "3FF8300830083FF83AA83FF83FF83AA8",
+            "80038003BFFFAAABBFFFBFFFAAABBFFF",
+            "C002FFFEEAAAFFFEFFFEEAAAFFFEC002",
+            "BFFFAAABBFFFBFFFAAABBFFF80038003",
+            "EAAAFFFEFFFEEAAAFFFEC002C002FFFE",
+            "2FFC2FFC2AAC2FFC200C200C2FFC2AAC",
+            "3FF83AA83FF8300830083FF83AA83FF8",
+            "0AB00BF0083008300BF00AB00BF00BF0",
+            "0FE00C200C200FE00EA00FE00FE00EA0",
+            "03800380038003800380038003800380",
+            "03C003C003C003C003C003C003C003C0",
+            "C002C00230080C200C203008C002C002",
+            "80038003300808300830300880038003",
+            "F00BF00B200C0C200C20200CF00BF00B",
+            "E00FE00F200C08300830200CE00FE00F",
+            "AC2AAC2A2C28082008202C28AC2AAC2A",
+            "F83FF83F383C0C300C30383CF83FF83F",
+            "03800380038003800380038003800380",
+            "02C002C002C002C002C002C002C002C0",
+            "FFBFFFBF3FBC038003803FBCFFBFFFBF",
+            "AAEAAAEA2AE802C002C02AE8AAEAAAEA",
+            "FC2FFC2F3C2C082008203C2CFC2FFC2F",
+            "F83FF83F383C0C300C30383CF83FF83F",
+            "B00AB00A3008082008203008B00AB00A",
+            "E00FE00F200C0C300C30200CE00FE00F",
+            "80038003200808200820200880038003",
+            "C003C003300C0C300C30300CC003C003",
+            "00000000000000000000000000000000",
+            "01400140014000000000000001400140",
+            "05500550055001400140014005500550",
+            "11501150115005500550055011501150",
+            "11501150115011501150115011501150",
+            "05500550055011501150115005500550",
+            "01400140014005500550055001400140",
+            "01400140014001400140014001400140",
+            "03C003C003C003C003C003C003C003C0",
+            "0D400D400D400D400D400D400D400D40",
+            "03C003C003C003C003C003C003C003C0",
+            "01400140014001400140014001400140",
+            "0BE80BE80BE00BC003C003C003C00BC0",
+            "20032003082B08A802800A800A8008A8",
+            "200320030803082C02B00A800A80082C",
+            "F000F0003C003C0C0F3003C00FF03C0C",
+            "00000000000000000000000000000000",
+            "01400140000000000000014001400140",
+            "05500550014001400140055005500550",
+            "05440544055005500550054405440544",
+            "05440544054405440544054405440544",
+            "05500550054405440544055005500550",
+            "01400140055005500550014001400140",
+            "01400140014001400140014001400140",
+            "03C003C003C003C003C003C003C003C0",
+            "01700170017001700170017001700170",
+            "03C003C003C003C003C003C003C003C0",
+            "01400140014001400140014001400140",
+            "03E003C003C003C003E00BE02BE02BE0",
+            "2A2002A002A002802A20E820C008C008",
+            "382002A002A00E803820C020C008C008",
+            "303C0FF003C00CF0303C003C000F000F",
+            "00000000000000000000000000000000",
+            "04100410041004100410041004100410",
+            "05500550055005500550055005500550",
+            "15541554155415541144114411441144",
+            "11441554155411441144114411441144",
+            "05500550055005500550055005500550",
+            "01400140014001400140014001400140",
+            "05500550055005500550055005500550",
+            "13C413C413C413C413C413C413C413C4",
+            "0D700D700D700D700D700D700D700D70",
+            "03C003C003C003C003C003C003C003C0",
+            "01400140014001400140014001400140",
+            "0BE00BE00BE00BE00BE00BE00BE00BE0",
+            "08200820082008200820082008200820",
+            "3C203C203C203C200820082008200820",
+            "003C003C003C003C3C3C3C3C3C3C3C3C",
+            "00000000000000000000000000000000",
+            "04100410041004100410041004100410",
+            "05500550055005500550055005500550",
+            "15541554155415541144114411441144",
+            "11441554155411441144114411441144",
+            "05500550055005500550055005500550",
+            "01400140014001400140014001400140",
+            "05500550055005500550055005500550",
+            "13C413C413C413C413C413C413C413C4",
+            "314C314C314C314C314C314C314C314C",
+            "03C003C003C003C003C003C003C003C0",
+            "01400140014001400140014001400140",
+            "0BE00BE00BE00BE00BE00BE00BE00BE0",
+            "08200820082008200820082008200820",
+            "08200820082008200820082008200820",
+            "3C3C3C3C3C3C3C3C3C3C3C3C3C3C3C3C",
+            "00000000000000000000000000000000",
+            "04100410041004100410041004100410",
+            "05500550055005500550055005500550",
+            "11441144114411441144114411441144",
+            "11441144114411441144114411441144",
+            "05500550055005500550055005500550",
+            "01400140014001400140014001400140",
+            "05500550055005500550055005500550",
+            "13C413C413C413C413C413C413C413C4",
+            "0D700D700D700D700D700D700D700D70",
+            "03C003C003C003C003C003C003C003C0",
+            "01400140014001400140014001400140",
+            "0BE00BE00BE00BE00BE00BE00BE00BE0",
+            "08200820082008200820082008200820",
+            "3C203C203C203C200820082008200820",
+            "003C003C003C003C3C3C3C3C3C3C3C3C",
+            "FFFF3F3F3F3F3F3F5555414171715555",
+            "DFDF3F3F1F1F1F1F5555515155555555",
+            "D5D535351D1D17174141717155555555",
+            "C0C030300C0C03035151555555555555",
+            "F3F3FFFFF3F3F3F37171555555554141",
+            "F3F3FDFDF1F1F1F15555555555555151",
+            "53535D5D7171D1D15555555541417171",
+            "03030C0C3030C0C05555555551515555",
+            "FFFF3F3F3F3F3F3F5555414171715555",
+            "DFDF3F3F1F1F1F1F5555515155555555",
+            "D5D535351D1D17174141717155555555",
+            "C0C030300C0C03035151555555555555",
+            "F3F3FFFFF3F3F3F37171555555554141",
+            "F3F3FDFDF1F1F1F15555555555555151",
+            "53535D5D7171D1D15555555541417171",
+            "03030C0C3030C0C05555555551515555",
+            "00000000000000000000000000000000",
+            "3FF003C03FF03FFCF000FFFC3FF0FFFC",
+            "FC3C0FC0F0FC00F0F000FC00FC00C0FC",
+            "FC3C0FC003F003C0F3F0FFF0FFF003F0",
+            "FC3C03C00FC000F0FFFC003CFC3C0FC0",
+            "FC3C03C03F00FC3C03F0FC3CFC3C3F00",
+            "FFFC3FFCFFFCFFFC03F0FFFCFFFCFC00",
+            "3FF03FFCFFFC3FF003F03FF03FF0FC00",
+            "0000000000000000FFFF000000000000",
+            "3FF03FF000000000000000000000000C",
+            "FC3CFC3C03C003C0FFFF3C3C0000003C",
+            "3FF0FC3C03C003C000000FF0000000F0",
+            "FC3C3FFC00000000FFFFFFFF000003C0",
+            "FC3C03F003C003C000000FF003C00F00",
+            "FFFC0FC003C003C0FFFF3C3C03C03C00",
+            "3FF03F0000000F00000000000F00F000",
+            "00000000000000000000000000000000",
+            "00000FC0FFF03FF0FFC0FFFCFFFC3FFC",
+            "00003FF0FC3CFC3CFCF0FC00FC00FC00",
+            "0000FC3CFFF0FC00FC3CFFF0FFF0FC00",
+            "0000FC3CFC3CFC00FC3CFC00FC00FCFC",
+            "0000FFFCFC3CFC3CFCF0FC00FC00FC3C",
+            "0000FC3CFFFCFFFCFFF0FFFCFC00FFFC",
+            "0000FC3CFFF03FF0FFC0FFFCFC003FFC",
+            "00000000000000000000000000000000",
+            "FC3C3FF0003CFC3CFC00F03CFC3C3FF0",
+            "FC3C0FC0003CFCF0FC00FCFCFF3CF03C",
+            "FFFC0FC0003CFFC0FC00FFFCFFFCF03C",
+            "FC3C0FC0003CFFC0FC00F33CFFFCF03C",
+            "FC3C0FC0FC3CFCF0FC00F03CFFFCF03C",
+            "FC3C3FF03FFCFC3CFFFCF03CFCFCFFFC",
+            "FC3C3FF00FF0FC3CFFFCF03CFC3C3FF0",
+            "00000000000000000000000000000000",
+            "FFF00FF0FFF03FF0FFFCFC3CFC3CF03C",
+            "FC3CFC3CFC3CFC000FC0FC3CFC3CF03C",
+            "FC3CFC3CFC3C3FF00FC0FC3CFC3CF33C",
+            "FFFCFC3CFFF0003C0FC0FC3CFC3CFFFC",
+            "FFF0FCF0FFF0003C0FC0FC3CFFFCFFFC",
+            "FC003FFCFC3CFFFC0FC0FFFC3FF0FCFC",
+            "FC000F3CFC3CFFF00FC0FFFC0FC0F03C",
+            "00000000000000000000000000000000",
+            "FC3CF03CFFFC00F003000F000C300000",
+            "FC3CF03C03F003C00CC003C00FF00000",
+            "0FF03FF00FC003C03FF003C033CC0000",
+            "0FF00FC03F0003C0C00C03C033CC0000",
+            "FC3C0FC0FC0003C03FF003C00FF00000",
+            "FC3C0FC0FFFC03C00CC003C003C0FFFF",
+            "FC3C0FC0FFFC00F003000F000FF00000"
+        ]
+        // risoluzione effettiva src = 256/4 x 512/2
+        let src;
+        const orig = new Image();
+        orig.onload = function () {
+            console.log(orig);
+            const ctx = document.getElementById("schermo").getContext("2d");
+            ctx.drawImage(orig, 0, 0);
+            src = ctx.getImageData(0, 0, 256, 512);
+        }
+        orig.src = "assets/img/textures.png";
+
+        const app = new PIXI.Application({
+            width: 800, height: 600, backgroundColor: 0x000000, resolution: 1,
+        });
+        document.body.appendChild(app.view);
+
+        let data = {
+            "meta": {
+                "image": "textures.png",
+                "format": "RGBA8888",
+                "size": {
+                    "w": 32,
+                    "h": 32
+                },
+                "scale": "1"
+            },
+            "frames": { "prima": { "frame": { "x": 0, "y": 0, "w": 16, "h": 16 }, "rotated": false, "trimmed": true, "spriteSourceSize": { "x": 0, "y": 0, "w": 16, "h": 16 }, "sourceSize": { "w": 16, "h": 16 } } }
+        }
+
+        const container = new PIXI.Container();
+
+        app.stage.addChild(container);
+
+        // Create a new texture
+        //const texture = PIXI.Texture.from('/assets/boulder.png');
+        let buffer = new Float32Array(256 * 512 * 4);
+        fill(buffer);
+        //buffer.fill(1);
+        let texture = PIXI.BaseTexture.fromBuffer(buffer, 256, 512)
+        let sheet = new PIXI.Spritesheet(texture, data);
+        sheet.parse(() => { console.log("parsed") });
+        let mytexture = new PIXI.Texture(texture);
+        // Create a 5x5 grid of bunnies
+
+        // const bunny = new PIXI.Sprite(sheet.textures["prima"]);
+        const bunny = new PIXI.Sprite(mytexture);
+
+        bunny.x = 0;
+        bunny.y = 0;
+        container.addChild(bunny);
+
+
+        // Move container to the center
+        container.x = 0;
+        container.y = 0;
+
+        // Center bunny sprite in local container coordinates
+
+
+        // Listen for animate update
+        app.ticker.add((delta) => {
+            // rotate the container!
+            // use delta to create frame-independent transform
+            //container.rotation -= 0.01 * delta;
+        });
+
+        function get_color(x, y) {
+            let pos = x * 4 + y * 4 * 256;
+            let r = src.data[pos];
+            let g = src.data[pos + 1];
+            let b = src.data[pos + 2];
+            let a = src.data[pos + 3];
+            if (a == 0) return "00";
+            if (r == 122) return "01";
+            if (r == 186 || r == 138) return "10";
+            return "11";
+        }
+
+        function hex(bits) {
+            let conv = {
+                "0000": "0",
+                "0001": "1",
+                "0010": "2",
+                "0011": "3",
+                "0100": "4",
+                "0101": "5",
+                "0110": "6",
+                "0111": "7",
+                "1000": "8",
+                "1001": "9",
+                "1010": "A",
+                "1011": "B",
+                "1100": "C",
+                "1101": "D",
+                "1110": "E",
+                "1111": "F",
+            }
+            let out = "";
+            for (let i = 0; i < 128; i += 4) {
+                out += conv[bits.substr(i, 4)];
+            }
+            return out;
+        }
+        function bin(hex) {
+
+        }
+
+
+        function plot(b, x, y, col) {
+            x = x * 4;
+            y = y * 2;
+            for (let dy = 0; dy < 2; dy++) {
+                for (let dx = 0; dx < 4; dx++) {
+                    b[(x+dx) * 4 + (y+dy) * 256 * 4 + 0] = col.r;
+                    b[(x+dx) * 4 + (y+dy) * 256 * 4 + 1] = col.g;
+                    b[(x+dx) * 4 + (y+dy) * 256 * 4 + 2] = col.b;
+                    b[(x+dx) * 4 + (y+dy) * 256 * 4 + 3] = col.a;
+                }
+            }
+        }
+
+        function fill(buf) {
+            let cols = [
+                { r: 0, g: 0, b: 0, a: 0 },
+                { r: 0.47, g: 0.47, b: 0.47, a: 1 },
+                { r: 0.54, g: 0.32, b: 0.16, a: 1 },
+                { r: 1, g: 1, b: 1, a: 1 },
+            ];
+            for (let y = 0; y < 256; y++) {
+                let chars = dati[y].split("");
+                for (let x = 0; x < 32; x++) {
+                    //debugger;
+                    let b = parseInt(chars[x], 16);
+                    let b1 = b >> 2;
+                    let b2 = b & 3;
+                    plot(buf, x * 2, y, cols[b1]);
+                    plot(buf, x * 2 + 1, y, cols[b2]);
+                    // da un certo punto in poi, riempire solo di bianco!!!
+                }
+            }
+            // for (let i=0;i<65536*4;i++){
+            //     b[i]=0.8;
+            // }
+        }
+
+
+        function prova() {
+            let cols = {
+                "00": { r: 0, g: 0, b: 0, a: 0 },
+                "01": { r: 0.47, g: 0.47, b: 0.47, a: 1 },
+                "10": { r: 0.54, g: 0.32, b: 0.16, a: 1 },
+                "11": { r: 1, g: 1, b: 1, a: 1 },
+            }
+            let dati = []
+            for (let y = 0; y < 512; y += 2) {
+                let bits = "";
+                for (let x = 0; x < 256; x += 4) {
+                    let col = get_color(x, y);
+                    bits += col;
+                    buffer[4 * x + y * 256 * 4 + 0] = cols[col].r;
+                    buffer[4 * x + y * 256 * 4 + 1] = cols[col].g;
+                    buffer[4 * x + y * 256 * 4 + 2] = cols[col].b;
+                    buffer[4 * x + y * 256 * 4 + 3] = cols[col].a;
+                    buffer[4 * (x + 1) + y * 256 * 4 + 0] = cols[col].r;
+                    buffer[4 * (x + 1) + y * 256 * 4 + 1] = cols[col].g;
+                    buffer[4 * (x + 1) + y * 256 * 4 + 2] = cols[col].b;
+                    buffer[4 * (x + 1) + y * 256 * 4 + 3] = cols[col].a;
+                    buffer[4 * (x + 2) + y * 256 * 4 + 0] = cols[col].r;
+                    buffer[4 * (x + 2) + y * 256 * 4 + 1] = cols[col].g;
+                    buffer[4 * (x + 2) + y * 256 * 4 + 2] = cols[col].b;
+                    buffer[4 * (x + 2) + y * 256 * 4 + 3] = cols[col].a;
+                    buffer[4 * (x + 3) + y * 256 * 4 + 0] = cols[col].r;
+                    buffer[4 * (x + 3) + y * 256 * 4 + 1] = cols[col].g;
+                    buffer[4 * (x + 3) + y * 256 * 4 + 2] = cols[col].b;
+                    buffer[4 * (x + 3) + y * 256 * 4 + 3] = cols[col].a;
+
+                    buffer[4 * x + (y + 1) * 256 * 4 + 0] = cols[col].r;
+                    buffer[4 * x + (y + 1) * 256 * 4 + 1] = cols[col].g;
+                    buffer[4 * x + (y + 1) * 256 * 4 + 2] = cols[col].b;
+                    buffer[4 * x + (y + 1) * 256 * 4 + 3] = cols[col].a;
+                    buffer[4 * (x + 1) + (y + 1) * 256 * 4 + 0] = cols[col].r;
+                    buffer[4 * (x + 1) + (y + 1) * 256 * 4 + 1] = cols[col].g;
+                    buffer[4 * (x + 1) + (y + 1) * 256 * 4 + 2] = cols[col].b;
+                    buffer[4 * (x + 1) + (y + 1) * 256 * 4 + 3] = cols[col].a;
+                    buffer[4 * (x + 2) + (y + 1) * 256 * 4 + 0] = cols[col].r;
+                    buffer[4 * (x + 2) + (y + 1) * 256 * 4 + 1] = cols[col].g;
+                    buffer[4 * (x + 2) + (y + 1) * 256 * 4 + 2] = cols[col].b;
+                    buffer[4 * (x + 2) + (y + 1) * 256 * 4 + 3] = cols[col].a;
+                    buffer[4 * (x + 3) + (y + 1) * 256 * 4 + 0] = cols[col].r;
+                    buffer[4 * (x + 3) + (y + 1) * 256 * 4 + 1] = cols[col].g;
+                    buffer[4 * (x + 3) + (y + 1) * 256 * 4 + 2] = cols[col].b;
+                    buffer[4 * (x + 3) + (y + 1) * 256 * 4 + 3] = cols[col].a;
+
+                }
+                //dati.push(BigInt("0b" + bits))
+                dati.push(hex(bits));
+            }
+
+            console.log(dati);
+
+
+            // buffer.fill(0.5);
+            console.log(texture.resource)
+            texture.resource.update();
+            //texture =  PIXI.BaseTexture.fromBuffer(buffer, 32, 32)
+            //texture.update();
+
+            //sheet = new PIXI.Spritesheet (texture, data);
+            //sheet.parse(()=>{console.log("di nuovo parsed")});   
+            //container.children[0].texture = sheet.textures["prima"];
+        }
+/*
+                                
+                                        let view;
+                                        let point = 165;
+                                        fetch('memoria.bin')
+                                            .then(response => response.arrayBuffer())
+                                            .then(buffer => { view = new Uint8Array(buffer); drawscreen() });
+                                
+                                
+                                        function draw() {
+                                            const bit = [128, 64, 32, 16, 8, 4, 2, 1];
+                                            const ctx = document.getElementById("schermo").getContext("2d");
+                                            ctx.clearRect(0, 0, 600, 600);
+                                            for (let ch = 0; ch < 1024; ch++) {
+                                                let bx = ch % 32;
+                                                let by = ch >> 5;
+                                                for (let y = 0; y < 8; y++) {
+                                                    let data = view[ch * 8 + y + point];
+                                                    for (let x = 0; x < 4; x++) {
+                                                        ctx.fillStyle = getColor(x, data);
+                                                        ctx.fillRect(x * 4 + bx * 18, y * 2 + by * 18, 4, 2);
+                                
+                                                    }
+                                                }
+                                            }
+                                        }
+                                
+                                
+                                        function drawscreen() {
+                                            const ctx = document.getElementById("schermo").getContext("2d");
+                                            ctx.clearRect(0, 0, 800, 600);
+                                
+                                            for (let ch = 0; ch < 1000; ch++) {
+                                
+                                                let c = view[point + 11264 + ch];
+                                                let bx = ch % 40;
+                                                let by = Math.floor(ch / 40);
+                                                for (let y = 0; y < 8; y++) {
+                                                    let data = view[c * 8 + indice + point + y];
+                                                    for (let x = 0; x < 4; x++) {
+                                                        ctx.fillStyle = getColor(x, data);
+                                                        ctx.fillRect((3-x) * 4 + bx * 16, y * 2 + by * 16, 4, 2);
+                                
+                                                    }
+                                                }
+                                            }
+                                        }
+                                        let indice = 12*1024;
+                                        function prova() {
+                                            //point += 2048;
+                                            indice+=8;
+                                            drawscreen();
+                                        }
+                                
+                                        function getColor(x, data) {
+                                            let cols = ['black', '#8b5429', '#787878', 'white'];
+                                            let bits = (data >> (x * 2)) & 3;
+                                            return cols[bits];
+                                        }
+                                
+                                        function parse() {
+                                            point = 139;
+                                            let inizio = point;
+                                            let ss = "";
+                                            for (let i = 0; i < 16; i++) {
+                                                ss += String.fromCharCode(view[point]);
+                                                point++;
+                                            }
+                                            let majv = view[point];
+                                            point++
+                                            let minv = view[point];
+                                            point++
+                                            let s0 = view[point++];
+                                            let s1 = view[point++];
+                                            let s2 = view[point++];
+                                            let s3 = view[point++];
+                                
+                                
+                                            console.log(ss);
+                                            console.log(majv, minv);
+                                            console.log(s0, s1, s2, s3);
+                                            let size = s0 + s1 * 256 + s2 * 256 * 256 + s3 * 256 * 256 * 256;
+                                            inizio += size;
+                                
+                                            point += 4;
+                                            console.log(point);
+                                            draw();
+                                
+                                        }
+                                */
+    </script>
+</body>
+
+</html>

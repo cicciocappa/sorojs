@@ -12,12 +12,14 @@ const Keys = {
     upPressed: false,
     shiftPressed: false,
     enterPressed: false,
+    escapePressed: false,
+    enterFull: false,
 };
 
 document.addEventListener('keydown', keyDownHandler, false);
 document.addEventListener('keyup', keyUpHandler, false);
 function keyDownHandler(event) {
-    console.log(event.keyCode);
+    // console.log(event.keyCode);
     switch (event.keyCode) {
         case 39:
 
@@ -37,6 +39,9 @@ function keyDownHandler(event) {
             break;
         case 13:
             Keys.enterPressed = true;
+            break;
+        case 27:
+            Keys.escapePressed = true;
             break;
     }
     //console.log(Keys.;
@@ -62,6 +67,10 @@ function keyUpHandler(event) {
             break;
         case 13:
             Keys.enterPressed = false;
+            Keys.enterFull = true;
+            break;
+        case 27:
+            Keys.escapePressed = false;
             break;
     }
     //console.log(Keys.;
@@ -93,4 +102,4 @@ function GetJoystickPos() {
     return joy;
 }
 
-export {Keys,GetJoystickPos}
+export { Keys, GetJoystickPos }
