@@ -14,6 +14,7 @@ const Keys = {
     enterPressed: false,
     escapePressed: false,
     enterFull: false,
+    
 };
 
 document.addEventListener('keydown', keyDownHandler, false);

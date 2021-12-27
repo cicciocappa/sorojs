@@ -13,7 +13,7 @@ const sfx = {
             if (intro_timer === 2) {
                 demo_mode = true;
                 SetNewGame();
-                SetStartingState();
+                SetUncoveringState();
 
             }
         }
@@ -38,6 +38,8 @@ const sfx = {
     esplosione: new Howl({ src: ['assets/audio/esplosione.wav'] }),
     conteggio: new Howl({ src: ['assets/audio/conteggio.wav'] }),
     fine_conteggio: new Howl({ src: ['assets/audio/fine_conteggio.wav'] }),
+    ameba: new Howl({ src: ['assets/audio/ameba.wav'], loop: true }),
+    muro_magico: new Howl({ src: ['assets/audio/muro_magico.wav'], loop: true }),
 
 }
 
@@ -214,12 +216,14 @@ let Tapping = false;
 let Blinking = false;
 let PointToTransfer;
 
+let AmoebaSound = false;
 let numberOfAmoebaFoundThisFrame = 0;
 let totalAmoebaFoundLastFrame = 0;
 let amoebaSuffocatedLastFrame = false;
 let atLeastOneAmoebaFoundThisFrameWhichCanGrow = false;
-let anAmoebaRandomFactor = 0.25;
-let magicWallStatus = MAGIC_WALL_OFF;
+let anAmoebaRandomFactor = 0.03;
+
+let startMagicWall;
 
 const CurrentPlayerData = {
     score: 0,
@@ -245,7 +249,8 @@ const level = {
     extraDiamondValue: 0,
     diamondsNeeded: 0,
     caveTime: 0,
-
+    tooManyAmoeba: 200,
+    magicWallStatus: MAGIC_WALL_OFF,
 
 };
 
@@ -287,7 +292,7 @@ function Parse(layout) {
             type: BUTTERFLY,
             attrib: DIRECTION_DOWN
         },
-        "A": {
+        "a": {
             type: AMOEBA,
             attrib: NONE
         },
@@ -299,7 +304,7 @@ function Parse(layout) {
             type: OUTBOX,
             attrib: NONE
         },
-        "G": {
+        "m": {
             type: MAGIC_WALL,
             attrib: NONE
         }
@@ -459,13 +464,14 @@ function SetCompletedState() {
     sfx.conteggio.play();
     tick = 0;
     cave++;
-    cave--;
+    // cave--;
     if (cave == 99) {
         cave = 0;
         if (round < 5) round++;
     }
 }
 function SetDeadState() {
+    console.log("setting dead")
     state = DEAD;
     already_dead = true;
     CurrentPlayerData.lives--;
@@ -477,7 +483,7 @@ const SetNewGame = () => {
     Input.Keys.enterFull = false;
     CurrentPlayerData.lives = 3;
     round = 1;
-    cave = 0;
+    cave = 8;
     CurrentPlayerData.score = 0;
     CurrentPlayerData.nextBonusLifeScore = 500;
     CurrentPlayerData.flashScreen = false;
@@ -504,8 +510,8 @@ const SetNewGame = () => {
 const SetUncoveringState = () => {
 
     console.log("UNCOVERING")
-    console.log(Sprites.container.children[678].x);
-
+    // console.log(Sprites.container.children[678].x);
+    numRoundsSinceRockfordSeenAlive = 0;
     tick = 0;
     frame_counter = 0;
     global_counter = 0;
@@ -516,7 +522,7 @@ const SetUncoveringState = () => {
     // effetto sonoro start?
     Sprites.WriteLine(`PLAYER 1, ${CurrentPlayerData.lives} M${CurrentPlayerData.lives > 1 ? 'E' : 'A'}N ${String.fromCharCode(65 + cave)}/${round} `, Sprites.hud, 0);
     let cl = caves[cave].layout.split("\n");
-    console.log(cl[0].length, cl.length);
+    //console.log(cl[0].length, cl.length);
     // inizializzo variabili di livello
     level.tiles = Parse(caves[cave].layout);
     //console.log(level.tiles);
@@ -532,9 +538,10 @@ const SetUncoveringState = () => {
     numberOfAmoebaFoundThisFrame = 0;
     totalAmoebaFoundLastFrame = 0;
     amoebaSuffocatedLastFrame = false;
+    AmoebaSound = false;
     atLeastOneAmoebaFoundThisFrameWhichCanGrow = false;
-    anAmoebaRandomFactor = 0.25;
-    magicWallStatus = MAGIC_WALL_OFF;
+    anAmoebaRandomFactor = 0.03;
+    level.magicWallStatus = MAGIC_WALL_OFF;
     if (!sfx.playing.has("uncovering")) sfx.uncovering.play();
     console.log(sfx.uncovering);
     // SPOSTARE IN "NUOVA CAVA"
@@ -547,8 +554,8 @@ const SetCoveringState = () => {
     // CONTROLLIAMO QUI SE ABBIAMO ANCORA VITE
     console.log("COVERING resetto lo schermo");
     ResetScreen();
-    console.log(Sprites.container.children[678].x);
-    //debugger;
+    //console.log(Sprites.container.children[678].x);
+
     tick = 0;
     frame_counter = 0;
     global_counter = 0;
@@ -560,8 +567,9 @@ const SetCoveringState = () => {
         Sprites.WriteLine(" G A M E   O V E R  ", Sprites.hud, 0);
     }
     if (!sfx.playing.has("uncovering")) sfx.uncovering.play();
+    sfx.ameba.stop();
     console.log("esco da setcovering con");
-  
+
     console.log(Sprites.container.children[678].x);
 
 }
@@ -579,12 +587,13 @@ const SetStartingState = () => {
 
 const SetRunningState = () => {
     //let s = " "+level.diamondsNeeded+"*"+level.diamond_point+" 00 "+ 
-    Sprites.WriteLine(` ${level.diamondsNeeded.toString().padStart(2, '0')}^${level.diamond_point} 00 ${level.caveTime.toString().padStart(3, '0')} ${CurrentPlayerData.score.toString().padStart(6, '0')}`, Sprites.hud, 0);
+    Sprites.WriteLine(` ${level.diamondsNeeded.toString().padStart(2, '0')}^${level.diamond_point.toString().padStart(2, '0')} 00 ${level.caveTime.toString().padStart(3, '0')} ${CurrentPlayerData.score.toString().padStart(6, '0')}`, Sprites.hud, 0);
     Sprites.ColorHud(0Xbfce72, 0, 3);
     Sprites.ColorHud(0Xbfce72, 7, 2);
     state = RUNNING;
     sfx.start.play();
     CurrentPlayerData.levelTimeElapsed = 0;
+    tick = 0;
 }
 
 const SetTimeOutState = () => {
@@ -629,10 +638,11 @@ const IncTick = () => {
 
 
 const Loop = (delta) => {
+    vdebug("numRoundsSinceRockfordSeenAlive", numRoundsSinceRockfordSeenAlive)
 
-    console.log("entro il loop con",state);
+    //console.log("entro il loop con",state);
 
-    console.log(Sprites.container.children[678]?.x);
+    //console.log(Sprites.container.children[678]?.x);
     //console.log(state);
     switch (state) {
         case INTRO:
@@ -651,14 +661,14 @@ const Loop = (delta) => {
             }
             UpdateSprites();
             // UpdateScreen();
-            console.log("sto effettuando covering");
-            console.log(Sprites.container.children[678].x);
+            //console.log("sto effettuando covering");
+            //console.log(Sprites.container.children[678].x);
             //if (Sprites.container.children[678].x==1188) debugger;
             IncTick();
             break;
         case UNCOVERING:
-            console.log("sto effettuando UNCOVERING");
-            console.log(Sprites.container.children[678].x);
+            //console.log("sto effettuando UNCOVERING");
+            //console.log(Sprites.container.children[678].x);
             if (tick % 2 == 0) {
                 UncoverScreen(global_counter);
                 global_counter++;
@@ -668,14 +678,14 @@ const Loop = (delta) => {
             }
 
             UpdateSprites();
-            console.log("prima di update screen");
-            console.log(Sprites.container.children[678].x);
-            
+            // console.log("prima di update screen");
+            // console.log(Sprites.container.children[678].x);
+
             UpdateScreen();
-            
-            console.log("dopo update screen");
-            console.log(Sprites.container.children[678].x);
-            
+
+            //console.log("dopo update screen");
+            //console.log(Sprites.container.children[678].x);
+
             IncTick();
             break;
         case STARTING:
@@ -698,16 +708,25 @@ const Loop = (delta) => {
                 numRoundsSinceRockfordSeenAlive++;
                 UpdateTime();
                 Scan();
+
             }
             if (numRoundsSinceRockfordSeenAlive > 1) {
+                console.log("set dead not seen!", numRoundsSinceRockfordSeenAlive)
                 SetDeadState();
             }
             if (Input.Keys.enterFull && demo_mode) {
+                demo_mode = false;
                 SetIntroState();
             }
             AnimateRockford();
             UpdateSprites();
             UpdateScreen();
+            //console.log(Input.Keys.escapePressed && !demo_mode);
+            if (Input.Keys.escapePressed && !demo_mode) {
+                console.log("set dead key escape")
+                SetDeadState();
+                SetCoveringState();
+            }
 
             IncTick();
 
@@ -747,7 +766,7 @@ const Loop = (delta) => {
                 tick++;
             }
 
-           
+
             UpdateScreen();
             UpdateSprites();
             TransferPoint();
@@ -810,7 +829,19 @@ function UncoverScreen(frame) {
 
 function UpdateTime() {
     // check for time out
-    let time = level.caveTime - Math.round(CurrentPlayerData.levelTimeElapsed);
+    let elapsed = Math.round(CurrentPlayerData.levelTimeElapsed);
+    // SPOSTARE IN UNA FUNZIONE UpdateGameStatus ?
+    if (level.magicWallStatus === MAGIC_WALL_ON) {
+
+        if (level.magicWallMillingTime < elapsed - startMagicWall) {
+            level.magicWallStatus = MAGIC_WALL_EXPIRED;
+            sfx.muro_magico.stop();
+        }
+    }
+    if (elapsed === level.magicWallMillingTime) {
+        anAmoebaRandomFactor = 0.25;
+    }
+    let time = level.caveTime - elapsed;
     if (time < 11 && !countdown_started) {
         sfx.countdown.play();
         countdown_started = true;
@@ -835,13 +866,7 @@ function Scan() {
         level.tiles[i].scanned = false;
 
     }
-    // SPOSTARE IN UNA FUNZIONE UpdateGameStatus ?
-    if (magicWallStatus === MAGIC_WALL_ON) {
-        level.magicWallMillingTime--;
-        if (level.magicWallMillingTime === 0) {
-            magicWallStatus = MAGIC_WALL_EXPIRED;
-        }
-    }
+
     numberOfAmoebaFoundThisFrame = 0;
     atLeastOneAmoebaFoundThisFrameWhichCanGrow = false;
     let cf;
@@ -909,6 +934,14 @@ function Scan() {
         amoebaSuffocatedLastFrame = true;
     }
     totalAmoebaFoundLastFrame = numberOfAmoebaFoundThisFrame;
+    if (numberOfAmoebaFoundThisFrame > 0 && !AmoebaSound) {
+        sfx.ameba.play();
+        AmoebaSound = true;
+    }
+    if (AmoebaSound && numberOfAmoebaFoundThisFrame < 1) {
+        sfx.ameba.stop();
+        AmoebaSound = false;
+    }
 }
 
 function GetObjectAtPosition(pos) {
@@ -988,9 +1021,14 @@ function ScanFallingBoulder(pos, type) {
     // If the object below is a magic wall, we activate it (if it's off), and
     // morph into a diamond two spaces below if it's now active. If the wall
     // is expired, we just disappear (with a sound still though).
-    else if (theObjectBelow.type == MAGIC_WALL) {
-        if (level.magicWallStatus == MAGIC_WALL_OFF) {
+    else if (theObjectBelow.type === MAGIC_WALL) {
+
+        if (level.magicWallStatus === MAGIC_WALL_OFF) {
             level.magicWallStatus = MAGIC_WALL_ON;
+            startMagicWall = CurrentPlayerData.levelTimeElapsed;
+
+            // ATTIVA SUONO
+            sfx.muro_magico.play();
         }
         if (level.magicWallStatus == MAGIC_WALL_ON) {
             NewPosition = pos + MAP_WIDTH * 2;
@@ -1101,41 +1139,52 @@ function GetExplosionType(anObject) {
 }
 
 function UpdateScreen() {
-    for (let j = 0; j < MAP_HEIGHT; j++) {
-        for (let i = 0; i < MAP_WIDTH; i++) {
-            let n = j * MAP_WIDTH + i;
-            if (level.tiles[n].type === OUTBOX) {
-                vdebug("outbox x", i);
-                vdebug("outbox y", j);
-                vdebug("children", n);
-                vdebug("container children", Sprites.container.children[n].x);
-                vdebug("sprites[n]", sprites[n].x);
-            }
-            if (level.tiles[n].attribute === FALLING) {
-                sprites[n].y = j * TILE_SIZE - 28 + tick * 4;
 
-            }
-            if (level.tiles[n].attribute & ROLLING_LEFT) {
-                sprites[n].x = i * TILE_SIZE + 28 - tick * 4;
-            }
-            if (level.tiles[n].attribute & ROLLING_RIGHT) {
-                sprites[n].x = i * TILE_SIZE - 28 + tick * 4;
-            }
-            if (level.tiles[n].attribute & MOVING_LEFT) {
-                sprites[n].x = i * TILE_SIZE + 28 - tick * 4;
 
+    if (state === COVERING || state === UNCOVERING) {
+        for (let j = 0; j < MAP_HEIGHT; j++) {
+            for (let i = 0; i < MAP_WIDTH; i++) {
+                let n = j * MAP_WIDTH + i;
+                sprites[n].y = j * TILE_SIZE;
+                sprites[n].x = i * TILE_SIZE;
             }
-            if (level.tiles[n].attribute & MOVING_RIGHT) {
-                sprites[n].x = i * TILE_SIZE - 28 + tick * 4;
+        }
+    }
+    else {
+
+
+
+
+        for (let j = 0; j < MAP_HEIGHT; j++) {
+            for (let i = 0; i < MAP_WIDTH; i++) {
+                let n = j * MAP_WIDTH + i;
+
+                if (level.tiles[n].attribute === FALLING) {
+                    sprites[n].y = j * TILE_SIZE - 28 + tick * 4;
+
+                }
+                if (level.tiles[n].attribute & ROLLING_LEFT) {
+                    sprites[n].x = i * TILE_SIZE + 28 - tick * 4;
+                }
+                if (level.tiles[n].attribute & ROLLING_RIGHT) {
+                    sprites[n].x = i * TILE_SIZE - 28 + tick * 4;
+                }
+                if (level.tiles[n].attribute & MOVING_LEFT) {
+                    sprites[n].x = i * TILE_SIZE + 28 - tick * 4;
+
+                }
+                if (level.tiles[n].attribute & MOVING_RIGHT) {
+                    sprites[n].x = i * TILE_SIZE - 28 + tick * 4;
+                }
+                if (level.tiles[n].attribute & MOVING_DOWN) {
+                    sprites[n].y = j * TILE_SIZE - 28 + tick * 4;
+                }
+                if (level.tiles[n].attribute & MOVING_UP) {
+                    sprites[n].y = j * TILE_SIZE + 28 - tick * 4;
+                }
+                //sprites[j][i].x = i * TILE_SIZE + dfield[j + py][i + px].dx + odx-48;
+                //sprites[j][i].y = j * TILE_SIZE + dfield[j + py][i + px].dy + ody-48;
             }
-            if (level.tiles[n].attribute & MOVING_DOWN) {
-                sprites[n].y = j * TILE_SIZE - 28 + tick * 4;
-            }
-            if (level.tiles[n].attribute & MOVING_UP) {
-                sprites[n].y = j * TILE_SIZE + 28 - tick * 4;
-            }
-            //sprites[j][i].x = i * TILE_SIZE + dfield[j + py][i + px].dx + odx-48;
-            //sprites[j][i].y = j * TILE_SIZE + dfield[j + py][i + px].dy + ody-48;
         }
     }
     if (ContainerLocation.scrollX > 0) {
@@ -1310,6 +1359,7 @@ function ScanRockford(pos) {
 
     // Rockford has been seen alive, so reset the counter indicating the number
     // of rounds since Rockford was last seen alive.
+    //console.log("resetto numRoundsSinceRockfordSeenAlive");
     numRoundsSinceRockfordSeenAlive = 0;
 }
 
@@ -1589,7 +1639,7 @@ function AddLife() {
 }
 
 function UpdateStatusbar() {
-    Sprites.UpdateHud(" ^^^" + CurrentPlayerData.currentDiamondValue, 0);
+    Sprites.UpdateHud(" ^^^" + CurrentPlayerData.currentDiamondValue.toString().padStart(2, '0'), 0);
     Sprites.ColorHud(0xFFFFFF, 0, 4);
 
 }
@@ -1810,7 +1860,7 @@ function ScanAmoeba(positionOfAmoeba) {
     if (totalAmoebaFoundLastFrame >= level.tooManyAmoeba) {
         PlaceObject(BOULDER, STATIONARY, positionOfAmoeba);
     }
-    //debugger;
+
     // If the amoeba suffocated last frame, morph into a diamond
     if (amoebaSuffocatedLastFrame) {
         PlaceObject(DIAMOND, STATIONARY, positionOfAmoeba);
@@ -1870,12 +1920,12 @@ function AmoebaInThisPosCanGrow(pos) {
     return false;
 }
 
-function AmoebaRandomlyDecidesToGrow(anAmoebaRandomFactor) {
+function AmoebaRandomlyDecidesToGrow(factor) {
     // Randomly decide whether this amoeba is going to attempt to grow or not.
     // anAmoebaRandomFactor should normally be 127 (slow growth) but sometimes is
     // changed to 15 (fast growth) if the amoeba has been alive too long.
     //   ASSERT(anAmoebaRandomFactor in {15, 127});
-    return (Math.random() < anAmoebaRandomFactor);
+    return (Math.random() < factor);
 }
 
 function vdebug(q, val) {

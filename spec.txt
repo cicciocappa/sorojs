@@ -542,7 +542,7 @@ Map #3
 017 Ww...wwr..w.d...wr..r.r...r.wr......w..W
 018 Ww.d....r.ww..r.wwr.......r.wr......w..W
 019 W..r....w...r......r.rr......w..r.w...wW
-020 Wr.ww..r.ww...w....r.rr......w..rd..r..W
+020 Wr.ww..r.ww...w....r.rr......w..rd..r..P
 021 Ww...r......r.rd......r...ww..wr..d.w..W
 022 Wrr...w.....r.rd......w..r.wd.d.rw.r...W
 023 WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW

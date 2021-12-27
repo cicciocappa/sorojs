@@ -345,8 +345,8 @@
             let b = src.data[pos + 2];
             let a = src.data[pos + 3];
             if (a == 0) return "00";
-            if (r == 122) return "01";
-            if (r == 186 || r == 138) return "10";
+            if (r == 64) return "01";
+            if (r == 192) return "10";
             return "11";
         }
 
