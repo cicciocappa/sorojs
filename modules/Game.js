@@ -192,6 +192,7 @@ let cave;
 let round;
 let countdown_started;
 let already_dead;
+let bonus_stage;
 
 let sprites;
 let RockfordLocation = {
@@ -292,6 +293,10 @@ function Parse(layout) {
             type: BUTTERFLY,
             attrib: DIRECTION_DOWN
         },
+        "b": {
+            type: BUTTERFLY,
+            attrib: DIRECTION_RIGHT
+        },
         "a": {
             type: AMOEBA,
             attrib: NONE
@@ -313,9 +318,12 @@ function Parse(layout) {
     let rows = layout.split("\n");
     let tiles = [];
     for (let j = 0; j < MAP_HEIGHT; j++) {
+       //console.log(j, rows[j].length);
         for (let i = 0; i < MAP_WIDTH; i++) {
+
             let n = j * MAP_WIDTH + i;
-            //console.log("car[", rows[j].charAt(i), "]=>", transl[rows[j].charAt(i)])
+
+           //console.log(j, i, "car[", rows[j].charAt(i), "]=>", rows[j].charCodeAt(i), 'tr', transl[rows[j].charAt(i)])
             tiles[n] = {
                 type: transl[rows[j].charAt(i)].type,
                 attribute: transl[rows[j].charAt(i)].attrib,
@@ -323,7 +331,7 @@ function Parse(layout) {
                 scanned: false
             };
 
-            if (tiles[n].type == INBOX) {
+            if (tiles[n].type === INBOX) {
                 RockfordLocation.x = i;
                 RockfordLocation.y = j;
             }
@@ -414,7 +422,7 @@ function SetReadyState() {
 }
 
 function ReadyClicked() {
-    console.log("ready clicked");
+   //console.log("ready clicked");
     DOM.view.removeEventListener("click", ReadyClicked);
     Sprites.sp["sfondo_titolo"].visible = true;
     Sprites.sp["titolo"].visible = true;
@@ -423,7 +431,7 @@ function ReadyClicked() {
 }
 
 function SetIntroState() {
-    console.log("INTRO");
+   //console.log("INTRO");
     Input.Keys.enterFull = false;
     Sprites.intro.visible = true;
     Sprites.container.visible = false;
@@ -465,25 +473,32 @@ function SetCompletedState() {
     tick = 0;
     cave++;
     // cave--;
-    if (cave == 99) {
+    if (cave === 20) {
         cave = 0;
         if (round < 5) round++;
     }
 }
 function SetDeadState() {
-    console.log("setting dead")
-    state = DEAD;
-    already_dead = true;
-    CurrentPlayerData.lives--;
+   //console.log("setting dead")
+    if (bonus_stage) {
+        SetCompletedState();
+    } else {
+        state = DEAD;
+        already_dead = true;
+        CurrentPlayerData.lives--;
+    }
+
 }
 
 const SetNewGame = () => {
-    console.log("NEW GAME");
+   //console.log("NEW GAME");
     // resettare gli sprites ad inizio gioco?
     Input.Keys.enterFull = false;
     CurrentPlayerData.lives = 3;
     round = 1;
-    cave = 8;
+    cave = 0;
+    bonus_stage = false;
+
     CurrentPlayerData.score = 0;
     CurrentPlayerData.nextBonusLifeScore = 500;
     CurrentPlayerData.flashScreen = false;
@@ -509,8 +524,9 @@ const SetNewGame = () => {
 
 const SetUncoveringState = () => {
 
-    console.log("UNCOVERING")
-    // console.log(Sprites.container.children[678].x);
+   //console.log("UNCOVERING")
+    bonus_stage = (cave + 1) % 5 === 0;
+    ////console.log(Sprites.container.children[678].x);
     numRoundsSinceRockfordSeenAlive = 0;
     tick = 0;
     frame_counter = 0;
@@ -520,7 +536,13 @@ const SetUncoveringState = () => {
     already_dead = false;
     sfx.intro.stop();
     // effetto sonoro start?
-    Sprites.WriteLine(`PLAYER 1, ${CurrentPlayerData.lives} M${CurrentPlayerData.lives > 1 ? 'E' : 'A'}N ${String.fromCharCode(65 + cave)}/${round} `, Sprites.hud, 0);
+    //alert(CurrentPlayerData.extra_point)
+    if (bonus_stage) {
+        Sprites.WriteLine(' B O N U S  L I F E ', Sprites.hud, 0);
+    } else {
+        Sprites.WriteLine(`PLAYER 1, ${CurrentPlayerData.lives} M${CurrentPlayerData.lives > 1 ? 'E' : 'A'}N ${String.fromCharCode(65 + cave)}/${round} `, Sprites.hud, 0);
+
+    }
     let cl = caves[cave].layout.split("\n");
     //console.log(cl[0].length, cl.length);
     // inizializzo variabili di livello
@@ -543,7 +565,7 @@ const SetUncoveringState = () => {
     anAmoebaRandomFactor = 0.03;
     level.magicWallStatus = MAGIC_WALL_OFF;
     if (!sfx.playing.has("uncovering")) sfx.uncovering.play();
-    console.log(sfx.uncovering);
+   //console.log(sfx.uncovering);
     // SPOSTARE IN "NUOVA CAVA"
     Textures.SetColors(caves[cave].colors);
     // SPOSTARE IN NUOVA CAVA
@@ -552,7 +574,7 @@ const SetUncoveringState = () => {
 
 const SetCoveringState = () => {
     // CONTROLLIAMO QUI SE ABBIAMO ANCORA VITE
-    console.log("COVERING resetto lo schermo");
+   //console.log("COVERING resetto lo schermo");
     ResetScreen();
     //console.log(Sprites.container.children[678].x);
 
@@ -568,14 +590,19 @@ const SetCoveringState = () => {
     }
     if (!sfx.playing.has("uncovering")) sfx.uncovering.play();
     sfx.ameba.stop();
-    console.log("esco da setcovering con");
+    sfx.countdown.stop();
+    sfx.muro_magico.stop();
 
-    console.log(Sprites.container.children[678].x);
+    countdown_started = true;
+
+   //console.log("esco da setcovering con");
+
+   //console.log(Sprites.container.children[678].x);
 
 }
 
 const SetStartingState = () => {
-    console.log("STARTING");
+   //console.log("STARTING");
     Input.Keys.enterFull = false;
     tick = 0;
     frame_counter = 0;
@@ -601,11 +628,17 @@ const SetTimeOutState = () => {
     frame_counter = 0;
     global_counter = 0;
     state = TIMEOUT;
-    if (!already_dead) {
-        CurrentPlayerData.lives--;
+    if (bonus_stage) {
+        SetCompletedState();
+    }
+    else {
+        if (!already_dead) {
+            CurrentPlayerData.lives--;
+        }
+
+        Sprites.WriteLine("     OUT OF TIME    ", Sprites.hud, 0);
     }
 
-    Sprites.WriteLine("     OUT OF TIME    ", Sprites.hud, 0);
 
 }
 
@@ -627,10 +660,10 @@ const AlternateTimeout = (frame) => {
 const IncTick = () => {
     tick++;
     CurrentPlayerData.levelTimeElapsed += TIME_STEP;
-    if (tick == 8) {
+    if (tick === 8) {
         tick = 0;
         frame_counter++;
-        if (frame_counter == 8) {
+        if (frame_counter === 8) {
             frame_counter = 0;
         }
     }
@@ -638,7 +671,7 @@ const IncTick = () => {
 
 
 const Loop = (delta) => {
-    vdebug("numRoundsSinceRockfordSeenAlive", numRoundsSinceRockfordSeenAlive)
+   // vdebug("numRoundsSinceRockfordSeenAlive", numRoundsSinceRockfordSeenAlive)
 
     //console.log("entro il loop con",state);
 
@@ -655,7 +688,7 @@ const Loop = (delta) => {
             }
             break;
         case COVERING:
-            if (tick % 2 == 0) {
+            if (tick % 2 === 0) {
                 CoverScreen(global_counter);
                 global_counter++;
             }
@@ -669,17 +702,17 @@ const Loop = (delta) => {
         case UNCOVERING:
             //console.log("sto effettuando UNCOVERING");
             //console.log(Sprites.container.children[678].x);
-            if (tick % 2 == 0) {
+            if (tick % 2 === 0) {
                 UncoverScreen(global_counter);
                 global_counter++;
             }
-            if (tick == 0) {
+            if (tick === 0) {
                 PanToRockford();
             }
 
             UpdateSprites();
-            // console.log("prima di update screen");
-            // console.log(Sprites.container.children[678].x);
+            ////console.log("prima di update screen");
+            ////console.log(Sprites.container.children[678].x);
 
             UpdateScreen();
 
@@ -689,7 +722,7 @@ const Loop = (delta) => {
             IncTick();
             break;
         case STARTING:
-            if (tick == 0) {
+            if (tick === 0) {
                 Scan();
 
             }
@@ -704,14 +737,14 @@ const Loop = (delta) => {
             break;
         case RUNNING:
 
-            if (tick == 0) {
+            if (tick === 0) {
                 numRoundsSinceRockfordSeenAlive++;
                 UpdateTime();
                 Scan();
 
             }
-            if (numRoundsSinceRockfordSeenAlive > 1) {
-                console.log("set dead not seen!", numRoundsSinceRockfordSeenAlive)
+            if (numRoundsSinceRockfordSeenAlive > 10) {
+               //console.log("set dead not seen!", numRoundsSinceRockfordSeenAlive)
                 SetDeadState();
             }
             if (Input.Keys.enterFull && demo_mode) {
@@ -723,7 +756,7 @@ const Loop = (delta) => {
             UpdateScreen();
             //console.log(Input.Keys.escapePressed && !demo_mode);
             if (Input.Keys.escapePressed && !demo_mode) {
-                console.log("set dead key escape")
+               //console.log("set dead key escape")
                 SetDeadState();
                 SetCoveringState();
             }
@@ -732,7 +765,7 @@ const Loop = (delta) => {
 
             break;
         case DEAD:
-            if (tick == 0) {
+            if (tick === 0) {
 
                 UpdateTime();
                 Scan();
@@ -881,11 +914,12 @@ function Scan() {
                     if (ct.attribute & FALLING) {
                         ScanFallingBoulder(i, ct.type);
                     } else {
-                        ScanStationaryBoulder(i, ct.type);
+
+                        ScanStationaryBoulder(i, ct.type, ct.attribute & ROLLING_LEFT || ct.attribute & ROLLING_RIGHT);
+
                     }
                     break;
-                case DIAMOND:
-                    break;
+
                 case EXPANDING_WALL:
                     break;
                 case ROCKFORD:
@@ -906,10 +940,10 @@ function Scan() {
                     cf++;
                     ////vdebug("cf", cf);
                     ct.attribute = cf << 16;
-                    if (cf == 4) {
+                    if (cf === 4) {
                         PlaceObject(DIAMOND, STATIONARY, i);
                     }
-                    if (cf == 9) {
+                    if (cf === 9) {
                         PlaceObject(SPACE, 0, i);
                     }
                     break;
@@ -918,7 +952,7 @@ function Scan() {
                     cf++;
                     //vdebug("cf", cf);
                     ct.attribute = cf << 16;
-                    if (cf == 24) {
+                    if (cf === 24) {
                         PlaceObject(ROCKFORD, 0, i);
                         RockfordLocation.x = i % MAP_WIDTH;
                         RockfordLocation.y = Math.floor(i / MAP_WIDTH);
@@ -955,7 +989,7 @@ function PlaceObject(object, attrib, pos) {
     level.tiles[pos].scanned = true;
 }
 
-function ScanStationaryBoulder(pos, type) {
+function ScanStationaryBoulder(pos, type, isrolling) {
     //console.log("stat boulder");
     //Local variables
     let NewPosition;
@@ -966,7 +1000,7 @@ function ScanStationaryBoulder(pos, type) {
     NewPosition = pos + MAP_WIDTH;
     theObjectBelow = GetObjectAtPosition(NewPosition);
     //	theObjectBelow = level.tiles[y+1][x].object;
-    if (theObjectBelow.type == SPACE) {
+    if (theObjectBelow.type === SPACE) {
         PlaceObject(type, FALLING, NewPosition);
         PlaceObject(SPACE, NONE, boulderPosition);
         if (type === DIAMOND) {
@@ -983,25 +1017,32 @@ function ScanStationaryBoulder(pos, type) {
             // Try rolling left
             // NewPosition = GetRelativePosition(boulderPosition, left1);
             NewPosition = pos - 1;
-            if ((GetObjectAtPosition(NewPosition).type == SPACE) && (GetObjectAtPosition(pos + MAP_WIDTH - 1).type == SPACE)) {
+            if ((GetObjectAtPosition(NewPosition).type === SPACE) && (GetObjectAtPosition(pos + MAP_WIDTH - 1).type === SPACE)) {
                 PlaceObject(type, FALLING | ROLLING_LEFT, NewPosition);
                 PlaceObject(SPACE, NONE, boulderPosition);
             } else {
                 // Try rolling right
                 //NewPosition = GetRelativePosition(boulderPosition, right1);
                 NewPosition = pos + 1;
-                if ((GetObjectAtPosition(NewPosition).type == SPACE) && (GetObjectAtPosition(pos + MAP_WIDTH + 1).type == SPACE)) {
+                if ((GetObjectAtPosition(NewPosition).type === SPACE) && (GetObjectAtPosition(pos + MAP_WIDTH + 1).type === SPACE)) {
                     PlaceObject(type, FALLING | ROLLING_RIGHT, NewPosition);
                     PlaceObject(SPACE, NONE, boulderPosition);
                 }
             }
+        } else {
+            if (isrolling) {
+                PlaceObject(type, STATIONARY, pos);
+            }
+           
         }
+        // SE STAVA ROTOLANDO, LO FERMIAMO?
+
     }
 
 }
 
 function ScanFallingBoulder(pos, type) {
-    //console.log("falling boulder");
+   //console.log("falling boulder");
     // in/out magicWallStatusType magicWallStatus
     // Local variables
     let NewPosition;
@@ -1012,7 +1053,7 @@ function ScanFallingBoulder(pos, type) {
     NewPosition = pos + MAP_WIDTH;
     theObjectBelow = GetObjectAtPosition(NewPosition);
     //console.log(NewPosition,theObjectBelow);
-    if (theObjectBelow.type == SPACE) {
+    if (theObjectBelow.type === SPACE) {
 
         PlaceObject(type, FALLING, NewPosition);
         PlaceObject(SPACE, NONE, boulderPosition);
@@ -1030,9 +1071,9 @@ function ScanFallingBoulder(pos, type) {
             // ATTIVA SUONO
             sfx.muro_magico.play();
         }
-        if (level.magicWallStatus == MAGIC_WALL_ON) {
+        if (level.magicWallStatus === MAGIC_WALL_ON) {
             NewPosition = pos + MAP_WIDTH * 2;
-            if (GetObjectAtPosition(NewPosition).type == SPACE) {
+            if (GetObjectAtPosition(NewPosition).type === SPACE) {
                 PlaceObject(DIAMOND + BOULDER - type, FALLING, NewPosition);
             }
         }
@@ -1057,14 +1098,14 @@ function ScanFallingBoulder(pos, type) {
             // Try rolling left
             NewPosition = pos - 1;
             //console.log(GetObjectAtPosition({y: y - 1,x: x - 1}));
-            if ((GetObjectAtPosition(NewPosition).type == SPACE) && (GetObjectAtPosition(pos + MAP_WIDTH - 1).type == SPACE)) {
+            if ((GetObjectAtPosition(NewPosition).type === SPACE) && (GetObjectAtPosition(pos + MAP_WIDTH - 1).type === SPACE)) {
                 PlaceObject(type, FALLING | ROLLING_LEFT, NewPosition);
                 PlaceObject(SPACE, NONE, boulderPosition);
             } else {
 
                 // Try rolling right
                 NewPosition = pos + 1;
-                if ((GetObjectAtPosition(NewPosition).type == SPACE) && (GetObjectAtPosition(pos + MAP_WIDTH + 1).type == SPACE)) {
+                if ((GetObjectAtPosition(NewPosition).type === SPACE) && (GetObjectAtPosition(pos + MAP_WIDTH + 1).type === SPACE)) {
                     PlaceObject(type, FALLING | ROLLING_RIGHT, NewPosition);
                     PlaceObject(SPACE, NONE, boulderPosition);
 
@@ -1089,7 +1130,7 @@ function ScanFallingBoulder(pos, type) {
 function Explode(pos, type) {
     sfx.esplosione.play();
     let startAnimation = 5;
-    if (type == BUTTERFLY) {
+    if (type === BUTTERFLY) {
         startAnimation = 0;
     }
     for (let i = -1; i < 2; i++)
@@ -1113,7 +1154,7 @@ function CanRollOff(anObjectBelow) {
     // We're going to assume that GetObjectProperty() automatically returns "true"
     // for objBoulderStationary, objDiamondStationary, objBrickWall, and returns "false"
     // for everything else (including objBoulderFalling and objDiamondFalling).
-    if ((anObjectBelow.type == BOULDER || anObjectBelow.type == DIAMOND) && anObjectBelow.attribute == STATIONARY) {
+    if ((anObjectBelow.type === BOULDER || anObjectBelow.type === DIAMOND) && anObjectBelow.attribute === STATIONARY) {
         return true;
     }
     return attributes[anObjectBelow.type].rounded;
@@ -1506,7 +1547,7 @@ function MoveRockfordStage3(newPosition, JoyPos) {
             break;
         // Diamond: pick it up
         case DIAMOND:
-            if (theObject.attribute == STATIONARY) {
+            if (theObject.attribute === STATIONARY) {
                 movementSuccessful = true;
                 PickUpDiamond();
             }
@@ -1521,15 +1562,15 @@ function MoveRockfordStage3(newPosition, JoyPos) {
             break;
         // Boulder: push it
         case BOULDER:
-            if (theObject.attribute == STATIONARY) {
-                if (JoyPos.direction == LEFT) {
+            if (theObject.attribute === STATIONARY) {
+                if (JoyPos.direction === LEFT) {
                     NewBoulderPosition = newPosition - 1;
-                    if (GetObjectAtPosition(NewBoulderPosition).type == SPACE) {
+                    if (GetObjectAtPosition(NewBoulderPosition).type === SPACE) {
                         movementSuccessful = PushBoulder(NewBoulderPosition, ROLLING_LEFT);
                     }
-                } else if (JoyPos.direction == RIGHT) {
+                } else if (JoyPos.direction === RIGHT) {
                     NewBoulderPosition = newPosition + 1;
-                    if (GetObjectAtPosition(NewBoulderPosition).type == SPACE) {
+                    if (GetObjectAtPosition(NewBoulderPosition).type === SPACE) {
                         movementSuccessful = PushBoulder(NewBoulderPosition, ROLLING_RIGHT);
                     }
                 }
@@ -1578,13 +1619,13 @@ function PushBoulder(newBoulderPosition, move) {
     // Local variables
     let pushSuccessful;
 
-    pushSuccessful = (Math.random() < .125);
+    pushSuccessful = (Math.random() < 1.125);
     if (pushSuccessful) {
         // RequestSound(boulderSound);
         //sfx.masso_ic.play();
         PlaySeparated("masso_ic");
         //PlaceBoulder(newBoulderPosition);
-        PlaceObject(BOULDER, move | FALLING, newBoulderPosition);
+        PlaceObject(BOULDER, move, newBoulderPosition);
     }
 
     return pushSuccessful;
@@ -1608,7 +1649,7 @@ function PickUpDiamond() {
 function CheckEnoughDiamonds() {
     Sprites.UpdateHud(CurrentPlayerData.diamondsCollected.toString().padStart(2, '0'), 7);
     Sprites.UpdateHud(CurrentPlayerData.score.toString().padStart(6, '0'), 14);
-    if (CurrentPlayerData.diamondsCollected == level.diamondsNeeded) {
+    if (CurrentPlayerData.diamondsCollected === level.diamondsNeeded) {
         CurrentPlayerData.gotEnoughDiamonds = true;
         CurrentPlayerData.currentDiamondValue = level.extraDiamondValue;
         UpdateStatusbar();
@@ -1623,7 +1664,7 @@ function CheckEnoughDiamonds() {
 function CheckForBonusLife() {
     //console.log("controllo bonus", CurrentPlayerData.score, CurrentPlayerData.nextBonusLifeScore);
     if (CurrentPlayerData.score >= CurrentPlayerData.nextBonusLifeScore) {
-        console.log("chiamo addlife");
+       //console.log("chiamo addlife");
         AddLife();
         CurrentPlayerData.nextBonusLifeScore += 500;
     }
@@ -1631,7 +1672,7 @@ function CheckForBonusLife() {
 
 function AddLife() {
     if (CurrentPlayerData.lives < 9) {
-        console.log("aggiungo vita");
+       //console.log("aggiungo vita");
         CurrentPlayerData.lives++;
         CurrentPlayerData.flashScreen = true;
         setTimeout(() => { CurrentPlayerData.flashScreen = false }, 5000);
@@ -1651,12 +1692,12 @@ function RequestFlash() {
 function TransferPoint() {
     if (PointToTransfer < 0) {
 
-        if (PointToTransfer == -30) {
+        if (PointToTransfer === -30) {
             SetCoveringState();
         }
         PointToTransfer--;
     } else {
-        if (PointToTransfer == 0) {
+        if (PointToTransfer === 0) {
             sfx.conteggio.stop();
             sfx.fine_conteggio.play();
 
@@ -1686,7 +1727,7 @@ function AnimateRockford() {
         Blinking = false;
 
         // Set up animation left or right as appropriate
-        if (RockfordAnimationFacingDirection == FACING_RIGHT) {
+        if (RockfordAnimationFacingDirection === FACING_RIGHT) {
             ////doing right-facing Rockford animation sequence
             RockfordSprite = 64 + RockfordFrame1;
         }
@@ -1696,7 +1737,7 @@ function AnimateRockford() {
 
 
     } else {
-        if (RockfordFrame == 0) {
+        if (RockfordFrame === 0) {
             Blinking = Math.random() < 0.25;
             if (Math.random() < 0.125) Tapping = !Tapping;
         }
@@ -1712,7 +1753,7 @@ function AnimateRockford() {
 
     }
     RockfordFrame++;
-    if (RockfordFrame == 16) {
+    if (RockfordFrame === 16) {
         RockfordFrame = 0;
     }
 }
@@ -1721,7 +1762,7 @@ function ScanFirefly(positionOfFirefly, directionOfFirefly, type) {
     // Local variables
     let NewPosition;
     let NewDirection;
-    let preferred = type == BUTTERFLY ? -1 : 1;
+    let preferred = type === BUTTERFLY ? -1 : 1;
 
     // First check whether the firefly will explode by being next to Rockford,
     // Rockford-scanned-this-frame or amoeba but not amoeba-scanned-this-frame.
@@ -1731,7 +1772,7 @@ function ScanFirefly(positionOfFirefly, directionOfFirefly, type) {
 
         // Failing that, attempt to move turn left and move there if possible
         NewPosition = GetNextFlyPosition(positionOfFirefly, directionOfFirefly, preferred);
-        if (GetObjectAtPosition(NewPosition).type == SPACE) {
+        if (GetObjectAtPosition(NewPosition).type === SPACE) {
             NewDirection = GetNewDirection(directionOfFirefly, preferred);
             PlaceObject(type, setMoveFromDir(NewDirection), NewPosition);
             PlaceObject(SPACE, NONE, positionOfFirefly); // ie old position
@@ -1739,7 +1780,7 @@ function ScanFirefly(positionOfFirefly, directionOfFirefly, type) {
 
             // Failing that, attempt to move straight ahead
             NewPosition = GetNextFlyPosition(positionOfFirefly, directionOfFirefly, 0);
-            if (GetObjectAtPosition(NewPosition).type == SPACE) {
+            if (GetObjectAtPosition(NewPosition).type === SPACE) {
                 PlaceObject(type, setMoveFromDir(directionOfFirefly << 8), NewPosition); // ie keep same direction
                 PlaceObject(SPACE, NONE, positionOfFirefly); // ie old position
             } else {
@@ -1813,7 +1854,7 @@ function CheckFlyExplode(aPosition) {
     // fly will explode if it is in contact with (ie Rockford or Amoeba).
     // Returns true if so, false if not.
     let altro = GetObjectAtPosition(aPosition).type;
-    return (altro == ROCKFORD || altro == AMOEBA);
+    return (altro === ROCKFORD || altro === AMOEBA);
 }
 
 function GetNextFlyPosition(currentPosition, directionOfFirefly, turnDirection) {
@@ -1881,7 +1922,7 @@ function ScanAmoeba(positionOfAmoeba) {
         direction = GetRandomDirection();
         NewPosition = positionOfAmoeba + direction;
         let type = GetObjectAtPosition(NewPosition).type;
-        if (type == SPACE || type == DIRT) {
+        if (type === SPACE || type === DIRT) {
             PlaceObject(AMOEBA, NONE, NewPosition);
         }
     }
@@ -1902,19 +1943,19 @@ function GetRandomDirection() {
 }
 function AmoebaInThisPosCanGrow(pos) {
     let type = GetObjectAtPosition(pos + 1).type;
-    if (type == SPACE || type == DIRT) {
+    if (type === SPACE || type === DIRT) {
         return true;
     }
     type = GetObjectAtPosition(pos + 1).type;
-    if (type == SPACE || type == DIRT) {
+    if (type === SPACE || type === DIRT) {
         return true;
     }
     type = GetObjectAtPosition(pos + MAP_WIDTH).type;
-    if (type == SPACE || type == DIRT) {
+    if (type === SPACE || type === DIRT) {
         return true;
     }
     type = GetObjectAtPosition(pos - MAP_WIDTH).type;
-    if (type == SPACE || type == DIRT) {
+    if (type === SPACE || type === DIRT) {
         return true;
     }
     return false;
