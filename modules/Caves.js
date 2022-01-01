@@ -21,6 +21,7 @@ const caves = [
         diamond_needed: [12, 12, 12, 12, 12],
         cave_time: [150, 110, 70, 40, 30],
         colors: [BLACK, GREY, ORANGE, WHITE],
+        
 
         layout: `WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW
 W...... ..d.r .....r.r....... ....r....W
@@ -44,6 +45,8 @@ W....rd..r........r......r.rd......r...W
 W... ..r. ..r.rr.........r.rd...... ..rW
 W.d.... ..... ......... .r..r....r...r.W
 WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW`
+ 
+
     },
     // CAVE B
     {

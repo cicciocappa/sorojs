@@ -1619,7 +1619,7 @@ function PushBoulder(newBoulderPosition, move) {
     // Local variables
     let pushSuccessful;
 
-    pushSuccessful = (Math.random() < 1.125);
+    pushSuccessful = (Math.random() < 0.125);
     if (pushSuccessful) {
         // RequestSound(boulderSound);
         //sfx.masso_ic.play();
